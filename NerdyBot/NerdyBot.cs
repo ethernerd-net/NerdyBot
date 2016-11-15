@@ -4,7 +4,10 @@ using Discord.Commands;
 using NerdyBot.Commands;
 using Newtonsoft.Json;
 using System;
+using System.Linq;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 
 namespace NerdyBot
 {
@@ -32,33 +35,61 @@ namespace NerdyBot
         x.PrefixChar = cfg.Prefix;
         x.AllowMentionPrefix = true;
       } );
-      
+
       discord.MessageReceived += Discord_MessageReceived;
 
       discord.UsingAudio( x =>
       {
         x.Mode = AudioMode.Outgoing;
       } );
+      InitCommands();
+    }
+
+    private List<ICommand> commands = new List<ICommand>();
+    private void InitCommands()
+    {
+      try
+      {
+        Assembly assembly = Assembly.GetExecutingAssembly();
+
+        foreach ( Type type in assembly.GetTypes() )
+        {
+          if ( type.GetInterface( "ICommand" ) != null )
+          {
+            ICommand command = ( ICommand )Activator.CreateInstance( type, null, null );
+            if ( this.commands.Any( cmd => cmd.Key == command.Key ) )
+              throw new ArgumentException( "Duplikated command key: " + command.Key );
+            command.Init();
+            this.commands.Add( command );
+          }
+        }
+      }
+      catch ( Exception )
+      {
+        // throw new InvalidOperationException(ex);
+      }
     }
 
     private async void Discord_MessageReceived( object sender, MessageEventArgs e )
     {
-      bool isCommand = true;
+      bool isCommand = false;
       if ( output == null )
         output = e.Server.GetChannel( cfg.ResponseChannel );
 
-      if ( e.Message.Text.StartsWith( cfg.Prefix + "n" ) )
-        CommandFactory.GetCommand<TagCommand>().Command( e, this );
-      else if ( e.Message.Text.StartsWith( cfg.Prefix + "unload" ) )
+      if ( e.Message.Text.StartsWith( cfg.Prefix.ToString() ) )
       {
-        if ( e.User.ServerPermissions.Administrator )
+        string[] args = e.Message.Text.Substring(1).Split( ' ' );
+        foreach ( var cmd in this.commands )
         {
+          if ( args[0] == cmd.Key )
+          {
+            isCommand = true;
+            //TODO: Rolllen Checken
+            cmd.Execute( e, args.Skip( 1 ).ToArray(), this );
+          }
+
         }
-        else
-          WriteInfo( "Du bist zu unwichtig für diesen Command!", e.Channel );
       }
-      else
-        isCommand = false;
 
       if ( isCommand )
         e.Message.Delete();

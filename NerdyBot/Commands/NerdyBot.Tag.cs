@@ -38,11 +38,19 @@ namespace NerdyBot.Commands
       }
     }
 
-    public Task Command( MessageEventArgs msg, IClient client )
+    #region ICommand
+
+    public string Key { get { return "n"; } }
+    public bool NeedAdmin { get { return false; } }
+
+    public void Init()
+    {
+    }
+
+    public Task Execute( MessageEventArgs msg, string[] args, IClient client )
     {
       return Task.Factory.StartNew( () =>
       {
-        string[] args = msg.Message.Text.Substring( (client.Config.Prefix + "n ").Length ).Split( ' ' );
         switch ( args[0].ToLower() )
         {
         case "create":
@@ -100,6 +108,7 @@ namespace NerdyBot.Commands
         }
       }, TaskCreationOptions.None );
     }
+    #endregion ICommand
 
     private string GetTypeString( TagType type )
     {

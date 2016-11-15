@@ -5,6 +5,9 @@ namespace NerdyBot.Commands
 {
   interface ICommand
   {
-    Task Command( MessageEventArgs msg, IClient client );
+    string Key { get; }
+    bool NeedAdmin { get; }
+    void Init();
+    Task Execute( MessageEventArgs msg, string[] args, IClient client );
   }
 }
