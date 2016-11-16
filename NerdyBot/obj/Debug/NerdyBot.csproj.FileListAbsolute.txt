@@ -54,3 +54,5 @@ C:\Users\ricow\Documents\Visual Studio 2015\Projects\Clone\NerdyBot\bin\Debug\Ni
 C:\Users\ricow\Documents\Visual Studio 2015\Projects\Clone\NerdyBot\bin\Debug\Nito.AsyncEx.Enlightenment.xml
 C:\Users\ricow\Documents\Visual Studio 2015\Projects\Clone\NerdyBot\bin\Debug\RestSharp.xml
 C:\Users\ricow\Documents\Visual Studio 2015\Projects\Clone\NerdyBot\obj\Debug\NerdyBot.csprojResolveAssemblyReference.cache
+C:\Users\ricow\documents\visual studio 2015\Projects\NerdyBot\NerdyBot\obj\Debug\NerdyBot.Properties.Resources.resources
+C:\Users\ricow\documents\visual studio 2015\Projects\NerdyBot\NerdyBot\obj\Debug\NerdyBot.csproj.GenerateResource.Cache
