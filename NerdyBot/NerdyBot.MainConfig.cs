@@ -4,8 +4,8 @@ namespace NerdyBot
 {
   class MainConfig : BaseConfig
   {
-    public MainConfig( string filePath ) 
-      : base( filePath )
+    public MainConfig( string fileName ) 
+      : base( fileName )
     {
     }
 

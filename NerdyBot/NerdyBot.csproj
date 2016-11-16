@@ -99,6 +99,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\NerdyBot.8Ball.cs" />
     <Compile Include="Commands\NerdyBot.BaseCommandConfig.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="NerdyBot.BaseConfig.cs" />
@@ -112,7 +113,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="cfg.json">
+    <None Include="conf\cfg.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />

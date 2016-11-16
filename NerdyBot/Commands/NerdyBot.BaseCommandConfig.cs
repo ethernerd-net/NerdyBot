@@ -5,8 +5,8 @@ namespace NerdyBot.Commands.Config
 {
   public class BaseCommandConfig : BaseConfig
   {
-    public BaseCommandConfig( string filePath, string defaultKey, params string[] aliases )
-      :base( filePath )
+    public BaseCommandConfig( string fileName, string defaultKey, params string[] aliases )
+      :base( fileName )
     {      
       this.Key = defaultKey;
       this.Aliases = aliases;

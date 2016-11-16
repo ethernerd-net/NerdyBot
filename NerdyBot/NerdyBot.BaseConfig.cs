@@ -6,9 +6,10 @@ namespace NerdyBot
   public abstract class BaseConfig
   {
     private string filePath;
-    public BaseConfig( string filePath )
+    public BaseConfig( string fileName )
     {
-      this.filePath = filePath;
+      if ( fileName != null )
+        this.filePath = Path.Combine( "conf", fileName );
     }
     private object lck = new object();
     public void Write()
