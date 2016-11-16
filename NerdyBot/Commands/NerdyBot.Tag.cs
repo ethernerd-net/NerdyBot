@@ -35,7 +35,8 @@ namespace NerdyBot.Commands
     #region ICommand
     public string Key { get { return this.cfg.Key; } }
     public IEnumerable<string> Aliases { get { return this.cfg.Aliases; } }
-    public bool NeedAdmin { get { return false; } }
+    public List<ulong> RestrictedRoles { get { return this.cfg.RestrictedRoles; } }
+    public RestrictType RestrictionType { get { return this.cfg.RestrictionType; } set { this.cfg.RestrictionType = value; } }
 
     public void Init()
     {
