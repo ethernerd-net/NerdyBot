@@ -2,7 +2,6 @@
 using Discord.Audio;
 using Discord.Commands;
 using NerdyBot.Commands;
-using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -15,13 +14,14 @@ namespace NerdyBot
   {
     DiscordClient discord;
     Channel output;
-    Config cfg;
+    MainConfig conf;
 
     private const string MAINCFG = "cfg.json";
 
     public NerdyBot()
     {
-      cfg = JsonConvert.DeserializeObject<Config>( File.ReadAllText( MAINCFG ) );
+      conf = new MainConfig( MAINCFG );
+      conf.Read();
 
       discord = new DiscordClient( x =>
        {
@@ -31,7 +31,7 @@ namespace NerdyBot
 
       discord.UsingCommands( x =>
       {
-        x.PrefixChar = cfg.Prefix;
+        x.PrefixChar = conf.Prefix;
         x.AllowMentionPrefix = true;
       } );
 
@@ -58,9 +58,9 @@ namespace NerdyBot
           if ( type.GetInterface( "ICommand" ) != null )
           {
             ICommand command = ( ICommand )Activator.CreateInstance( type, null, null );
-            if ( preservedKeys.Contains( command.Key ) || this.commands.Any( cmd => cmd.Key == command.Key || cmd.Aliases.Any( a => a == command.Key || command.Aliases.Any( al => a == al ) ) ) )
-              throw new InvalidOperationException( "Duplikated command key or alias: " + command.Key );
             command.Init();
+            if ( preservedKeys.Contains( command.Key ) || this.commands.Any( cmd => cmd.Key == command.Key || cmd.Aliases.Any( a => a == command.Key || command.Aliases.Any( al => a == al ) ) ) )
+              throw new InvalidOperationException( "Duplicated command key or alias: " + command.Key );
             this.commands.Add( command );
           }
         }
@@ -75,9 +75,9 @@ namespace NerdyBot
     {
       bool isCommand = false;
       if ( output == null )
-        output = e.Server.GetChannel( cfg.ResponseChannel );
+        output = e.Server.GetChannel( conf.ResponseChannel );
 
-      if ( e.Message.Text.StartsWith( cfg.Prefix.ToString() ) )
+      if ( e.Message.Text.StartsWith( conf.Prefix.ToString() ) )
       {
         string[] args = e.Message.Text.Substring(1).Split( ' ' );
         if ( args[0] == "perm" )
@@ -205,18 +205,17 @@ namespace NerdyBot
       Console.WriteLine( e.Message );
     }
 
-
     public void Start()
     {
       discord.ExecuteAndWait( async () =>
        {
-         await discord.Connect( cfg.Token, TokenType.Bot );
+         await discord.Connect( conf.Token, TokenType.Bot );
          discord.SetGame( "Not nerdy at all" );
        } );
     }
 
     #region IClient
-    public Config Config { get { return this.cfg; } }
+    public MainConfig Config { get { return this.conf; } }
 
 
     public T GetService<T>() where T : class, IService

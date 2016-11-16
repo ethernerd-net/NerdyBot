@@ -4,7 +4,7 @@ namespace NerdyBot
 {
   interface IClient
   {
-    Config Config { get; }
+    MainConfig Config { get; }
     void Log( string text );
     void Write( string info, Channel ch = null );
     void WriteInfo( string info, Channel ch = null );

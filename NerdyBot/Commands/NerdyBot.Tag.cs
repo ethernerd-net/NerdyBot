@@ -15,7 +15,7 @@ namespace NerdyBot.Commands
 {
   class TagCommand : ICommand
   {
-    private CommandConfig<Tag> cfg;
+    private TagCommandConfig<Tag> conf;
     private const string CFGPATH = "tag.json";
     private const string DEFAULTKEY = "tag";
     private static readonly string[] DEFAULTALIASES = new string[] { "t" };
@@ -33,14 +33,15 @@ namespace NerdyBot.Commands
     }
 
     #region ICommand
-    public string Key { get { return this.cfg.Key; } }
-    public IEnumerable<string> Aliases { get { return this.cfg.Aliases; } }
-    public List<ulong> RestrictedRoles { get { return this.cfg.RestrictedRoles; } }
-    public RestrictType RestrictionType { get { return this.cfg.RestrictionType; } set { this.cfg.RestrictionType = value; } }
+    public string Key { get { return this.conf.Key; } }
+    public IEnumerable<string> Aliases { get { return this.conf.Aliases; } }
+    public List<ulong> RestrictedRoles { get { return this.conf.RestrictedRoles; } }
+    public RestrictType RestrictionType { get { return this.conf.RestrictionType; } set { this.conf.RestrictionType = value; } }
 
     public void Init()
     {
-      this.cfg = new CommandConfig<Tag>( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
+      this.conf = new TagCommandConfig<Tag>( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
+      this.conf.Read();
     }
 
     public Task Execute( MessageEventArgs msg, string[] args, IClient client )
@@ -123,7 +124,7 @@ namespace NerdyBot.Commands
 
     private async void Create( MessageEventArgs msg, string[] args, IClient client )
     {
-      if ( this.cfg.Items.Exists( t => t.Name == args[1].ToLower() ) )
+      if ( this.conf.Items.Exists( t => t.Name == args[1].ToLower() ) )
         client.WriteInfo( "Tag '" + args[1] + "' existiert bereits!!", msg.Channel );
       else if ( KeyWords.Contains( args[1].ToLower() ) )
         client.WriteInfo( args[1] + "' ist ein reservierter Tag!!", msg.Channel );
@@ -157,15 +158,15 @@ namespace NerdyBot.Commands
           client.WriteInfo( args[2] + " ist ein invalider Parameter", msg.Channel );
           return;
         }
-        this.cfg.Items.Add( tag );
-        this.cfg.Write();
+        this.conf.Items.Add( tag );
+        this.conf.Write();
         client.WriteInfo( "Tag '" + tag.Name + "' erstellt!", msg.Channel );
       }
     }
 
     private async void Delete( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
       else
@@ -173,15 +174,15 @@ namespace NerdyBot.Commands
         if ( tag.Type == TagType.Sound )
           Directory.Delete( Path.Combine( "sounds", tag.Name ), true );
 
-        this.cfg.Items.Remove( tag );
-        this.cfg.Write();
+        this.conf.Items.Remove( tag );
+        this.conf.Write();
         client.WriteInfo( "Tag '" + tag.Name + "' delete!", msg.Channel );
       }
     }
 
     private async void Edit( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
       else
@@ -211,7 +212,7 @@ namespace NerdyBot.Commands
           client.WriteInfo( remCount + " / " + entries.Count() + " removed", msg.Channel );
           break;
         case "rename":
-          if ( this.cfg.Items.FirstOrDefault( t => t.Name == entries[0] ) == null )
+          if ( this.conf.Items.FirstOrDefault( t => t.Name == entries[0] ) == null )
           {
             if ( tag.Type != TagType.Text )
             {
@@ -229,13 +230,13 @@ namespace NerdyBot.Commands
           client.WriteInfo( "Die Option Name '" + args[2] + "' ist nicht valide!", msg.Channel );
           return;
         }
-        this.cfg.Write();
+        this.conf.Write();
       }
     }
 
     private async void List( MessageEventArgs msg, IClient client )
     {
-      var tagsInOrder = this.cfg.Items.OrderBy( x => x.Name );
+      var tagsInOrder = this.conf.Items.OrderBy( x => x.Name );
       StringBuilder sb = new StringBuilder( "" );
       if ( tagsInOrder.Count() > 0 )
       {
@@ -261,7 +262,7 @@ namespace NerdyBot.Commands
 
     private async void Info( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[1] + " existiert nicht!", msg.Channel );
       else
@@ -291,7 +292,7 @@ namespace NerdyBot.Commands
 
     private async void Raw( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[1] + " existiert nicht!", msg.Channel );
       else
@@ -309,7 +310,7 @@ namespace NerdyBot.Commands
 
     private async void Send( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[0].ToLower() );
+      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[0].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[0] + " existiert nicht!", msg.Channel );
       else
@@ -333,7 +334,7 @@ namespace NerdyBot.Commands
           throw new ArgumentException( "WTF?!" );
         }
         tag.Count++;
-        this.cfg.Write();
+        this.conf.Write();
       }
     }
 
