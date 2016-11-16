@@ -99,6 +99,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\NerdyBot.Translate.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="IClient.cs" />
