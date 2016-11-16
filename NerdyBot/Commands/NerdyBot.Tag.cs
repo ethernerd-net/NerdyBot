@@ -20,7 +20,6 @@ namespace NerdyBot.Commands
     private const string DEFAULTKEY = "tag";
     private static readonly string[] DEFAULTALIASES = new string[] { "t" };
 
-
     private bool stop = false;
     private object playing = new object();
 
@@ -187,50 +186,55 @@ namespace NerdyBot.Commands
         client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
       else
       {
-        string[] entries = args.Skip( 3 ).ToArray();
-
-        switch ( args[2] )
+        if ( tag.Author == msg.User.ToString() || msg.User.ServerPermissions.Administrator )
         {
-        case "add":
-          switch ( tag.Type )
+          string[] entries = args.Skip( 3 ).ToArray();
+
+          switch ( args[2] )
           {
-          case TagType.Text:
-            AddTextToTag( tag, entries );
+          case "add":
+            switch ( tag.Type )
+            {
+            case TagType.Text:
+              AddTextToTag( tag, entries );
+              break;
+            case TagType.Sound:
+              AddSoundToTag( tag, entries, client );
+              break;
+            case TagType.Url:
+              AddUrlToTag( tag, entries );
+              break;
+            default:
+              throw new ArgumentException( "WTF?!?!" );
+            }
             break;
-          case TagType.Sound:
-            AddSoundToTag( tag, entries, client );
+          case "remove":
+            int remCount = RemoveTagEntry( tag, entries );
+            client.WriteInfo( remCount + " / " + entries.Count() + " removed", msg.Channel );
             break;
-          case TagType.Url:
-            AddUrlToTag( tag, entries );
+          case "rename":
+            if ( this.conf.Items.FirstOrDefault( t => t.Name == entries[0] ) == null )
+            {
+              if ( tag.Type != TagType.Text )
+              {
+                string dirName = tag.Type == TagType.Sound ? "sounds" : "pics";
+                Directory.Move( Path.Combine( dirName, tag.Name ), Path.Combine( dirName, entries[0] ) );
+              }
+              tag.Name = entries[0];
+            }
+            else
+              client.WriteInfo( "Tag Name '" + entries[0] + "' wird bereits verwendet!", msg.Channel );
+            break;
+          case "volume":
             break;
           default:
-            throw new ArgumentException( "WTF?!?!" );
+            client.WriteInfo( "Die Option Name '" + args[2] + "' ist nicht valide!", msg.Channel );
+            return;
           }
-          break;
-        case "remove":
-          int remCount = RemoveTagEntry( tag, entries );
-          client.WriteInfo( remCount + " / " + entries.Count() + " removed", msg.Channel );
-          break;
-        case "rename":
-          if ( this.conf.Items.FirstOrDefault( t => t.Name == entries[0] ) == null )
-          {
-            if ( tag.Type != TagType.Text )
-            {
-              string dirName = tag.Type == TagType.Sound ? "sounds" : "pics";
-              Directory.Move( Path.Combine( dirName, tag.Name ), Path.Combine( dirName, entries[0] ) );
-            }
-            tag.Name = entries[0];
-          }
-          else
-            client.WriteInfo( "Tag Name '" + entries[0] + "' wird bereits verwendet!", msg.Channel );
-          break;
-        case "volume":
-          break;
-        default:
-          client.WriteInfo( "Die Option Name '" + args[2] + "' ist nicht valide!", msg.Channel );
-          return;
+          this.conf.Write();
         }
-        this.conf.Write();
+        else
+          client.WriteInfo( "Du bist zu unwichtig dafür!", msg.Channel );
       }
     }
 
