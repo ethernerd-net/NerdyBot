@@ -101,6 +101,7 @@
   <ItemGroup>
     <Compile Include="Commands\CommandConfig.cs" />
     <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="Commands\NerdyBot.Translate.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="IClient.cs" />
     <Compile Include="NerdyBot.cs" />
