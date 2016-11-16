@@ -19,7 +19,6 @@ namespace NerdyBot
 
     private const string MAINCFG = "cfg.json";
 
-
     public NerdyBot()
     {
       cfg = JsonConvert.DeserializeObject<Config>( File.ReadAllText( MAINCFG ) );
@@ -57,8 +56,8 @@ namespace NerdyBot
           if ( type.GetInterface( "ICommand" ) != null )
           {
             ICommand command = ( ICommand )Activator.CreateInstance( type, null, null );
-            if ( this.commands.Any( cmd => cmd.Key == command.Key ) )
-              throw new ArgumentException( "Duplikated command key: " + command.Key );
+            if ( this.commands.Any( cmd => cmd.Key == command.Key || cmd.Aliases.Any( a => a == command.Key || command.Aliases.Any( al => a == al ) ) ) )
+              throw new ArgumentException( "Duplikated command key or alias: " + command.Key );
             command.Init();
             this.commands.Add( command );
           }
@@ -81,13 +80,12 @@ namespace NerdyBot
         string[] args = e.Message.Text.Substring(1).Split( ' ' );
         foreach ( var cmd in this.commands )
         {
-          if ( args[0] == cmd.Key )
+          if ( args[0] == cmd.Key || cmd.Aliases.Any( a => args[0] == a ) )
           {
             isCommand = true;
             //TODO: Rolllen Checken
             cmd.Execute( e, args.Skip( 1 ).ToArray(), this );
           }
-
         }
       }
 

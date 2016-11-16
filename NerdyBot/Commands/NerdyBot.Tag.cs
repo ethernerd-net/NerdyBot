@@ -1,7 +1,7 @@
 ﻿using Discord;
 using Discord.Audio;
 using NAudio.Wave;
-using Newtonsoft.Json;
+using NerdyBot.Commands.Config;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,20 +15,14 @@ namespace NerdyBot.Commands
 {
   class TagCommand : ICommand
   {
-    private TagCfg cfg;
-    private const string TAGCFG = "tag.json";
+    private CommandConfig<Tag> cfg;
+    private const string CFGPATH = "tag.json";
+    private const string DEFAULTKEY = "tag";
+    private static readonly string[] DEFAULTALIASES = new string[] { "t" };
+
+
     private bool stop = false;
-
     private object playing = new object();
-
-    public TagCommand()
-    {
-      if ( File.Exists( TAGCFG ) )
-        this.cfg = JsonConvert.DeserializeObject<TagCfg>( File.ReadAllText( TAGCFG ) );
-      else
-        this.cfg = new TagCfg();
-      if ( this.cfg.Tags == null ) this.cfg.Tags = new List<Tag>();
-    }
 
     private IEnumerable<string> KeyWords
     {
@@ -39,12 +33,13 @@ namespace NerdyBot.Commands
     }
 
     #region ICommand
-
-    public string Key { get { return "n"; } }
+    public string Key { get { return this.cfg.Key; } }
+    public IEnumerable<string> Aliases { get { return this.cfg.Aliases; } }
     public bool NeedAdmin { get { return false; } }
 
     public void Init()
     {
+      this.cfg = new CommandConfig<Tag>( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
     }
 
     public Task Execute( MessageEventArgs msg, string[] args, IClient client )
@@ -127,7 +122,7 @@ namespace NerdyBot.Commands
 
     private async void Create( MessageEventArgs msg, string[] args, IClient client )
     {
-      if ( this.cfg.Tags.Exists( t => t.Name == args[1].ToLower() ) )
+      if ( this.cfg.Items.Exists( t => t.Name == args[1].ToLower() ) )
         client.WriteInfo( "Tag '" + args[1] + "' existiert bereits!!", msg.Channel );
       else if ( KeyWords.Contains( args[1].ToLower() ) )
         client.WriteInfo( args[1] + "' ist ein reservierter Tag!!", msg.Channel );
@@ -139,7 +134,7 @@ namespace NerdyBot.Commands
         tag.CreateDate = DateTime.Now;
         tag.Count = 0;
         tag.Volume = 100;
-        tag.Items = new List<string>();
+        tag.Entries = new List<string>();
 
         switch ( args[2].ToLower() )
         {
@@ -161,15 +156,15 @@ namespace NerdyBot.Commands
           client.WriteInfo( args[2] + " ist ein invalider Parameter", msg.Channel );
           return;
         }
-        this.cfg.Tags.Add( tag );
-        this.cfg.Save( TAGCFG );
+        this.cfg.Items.Add( tag );
+        this.cfg.Write();
         client.WriteInfo( "Tag '" + tag.Name + "' erstellt!", msg.Channel );
       }
     }
 
     private async void Delete( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
       else
@@ -177,15 +172,15 @@ namespace NerdyBot.Commands
         if ( tag.Type == TagType.Sound )
           Directory.Delete( Path.Combine( "sounds", tag.Name ), true );
 
-        this.cfg.Tags.Remove( tag );
-        this.cfg.Save( TAGCFG );
+        this.cfg.Items.Remove( tag );
+        this.cfg.Write();
         client.WriteInfo( "Tag '" + tag.Name + "' delete!", msg.Channel );
       }
     }
 
     private async void Edit( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
       else
@@ -215,7 +210,7 @@ namespace NerdyBot.Commands
           client.WriteInfo( remCount + " / " + entries.Count() + " removed", msg.Channel );
           break;
         case "rename":
-          if ( this.cfg.Tags.FirstOrDefault( t => t.Name == entries[0] ) == null )
+          if ( this.cfg.Items.FirstOrDefault( t => t.Name == entries[0] ) == null )
           {
             if ( tag.Type != TagType.Text )
             {
@@ -233,13 +228,13 @@ namespace NerdyBot.Commands
           client.WriteInfo( "Die Option Name '" + args[2] + "' ist nicht valide!", msg.Channel );
           return;
         }
-        this.cfg.Save( TAGCFG );
+        this.cfg.Write();
       }
     }
 
     private async void List( MessageEventArgs msg, IClient client )
     {
-      var tagsInOrder = this.cfg.Tags.OrderBy( x => x.Name );
+      var tagsInOrder = this.cfg.Items.OrderBy( x => x.Name );
       StringBuilder sb = new StringBuilder( "" );
       if ( tagsInOrder.Count() > 0 )
       {
@@ -255,7 +250,7 @@ namespace NerdyBot.Commands
             sb.AppendLine( "# " + lastHeader + " #" );
           }
           sb.Append( "[" + t.Name + "]" );
-          sb.Append( "(" + GetTypeString( t.Type ) + "|" + t.Items.Count() + ")" );
+          sb.Append( "(" + GetTypeString( t.Type ) + "|" + t.Entries.Count() + ")" );
           sb.Append( ", " );
         }
         sb.Remove( sb.Length - 2, 2 );
@@ -265,7 +260,7 @@ namespace NerdyBot.Commands
 
     private async void Info( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[1] + " existiert nicht!", msg.Channel );
       else
@@ -287,7 +282,7 @@ namespace NerdyBot.Commands
         sb.AppendLine( tag.Count.ToString() );
 
         sb.Append( "Anzahl Einträge: " );
-        sb.AppendLine( tag.Items.Count.ToString() );
+        sb.AppendLine( tag.Entries.Count.ToString() );
 
         client.WriteBlock( sb.ToString(), "", msg.Channel );
       }
@@ -295,7 +290,7 @@ namespace NerdyBot.Commands
 
     private async void Raw( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[1] + " existiert nicht!", msg.Channel );
       else
@@ -304,7 +299,7 @@ namespace NerdyBot.Commands
         sb.AppendLine();
         sb.AppendLine();
 
-        foreach ( string entry in tag.Items )
+        foreach ( string entry in tag.Entries )
           sb.AppendLine( entry );
 
         client.WriteBlock( sb.ToString(), "", msg.Channel );
@@ -313,28 +308,31 @@ namespace NerdyBot.Commands
 
     private async void Send( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.cfg.Tags.FirstOrDefault( t => t.Name == args[0].ToLower() );
+      var tag = this.cfg.Items.FirstOrDefault( t => t.Name == args[0].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[0] + " existiert nicht!", msg.Channel );
       else
       {
-        int idx = ( new Random() ).Next( 0, tag.Items.Count() );
+        int idx = ( new Random() ).Next( 0, tag.Entries.Count() );
         switch ( tag.Type )
         {
         case TagType.Text:
-          client.WriteBlock( tag.Items[idx], "", msg.Channel );
+          client.WriteBlock( tag.Entries[idx], "", msg.Channel );
           break;
         case TagType.Sound:
-          SendAudio( client.GetService<AudioService>(), msg.User.VoiceChannel, tag, idx, client );
+          if ( msg.User.VoiceChannel != null )
+            SendAudio( client.GetService<AudioService>(), msg.User.VoiceChannel, tag, idx, client );
+          else
+            client.WriteInfo( "In einen Voicechannel du musst!", msg.Channel );
           break;
         case TagType.Url:
-          client.Write( tag.Items[idx], msg.Channel );
+          client.Write( tag.Entries[idx], msg.Channel );
           break;
         default:
           throw new ArgumentException( "WTF?!" );
         }
         tag.Count++;
-        this.cfg.Save( TAGCFG );
+        this.cfg.Write();
       }
     }
 
@@ -344,23 +342,23 @@ namespace NerdyBot.Commands
       for ( int i = 0; i < args.Count(); i++ )
         text += " " + args[i];
 
-      tag.Items = text.Split( new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+      tag.Entries = text.Split( new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries ).ToList();
     }
     private void AddSoundToTag( Tag tag, string[] args, IClient client )
     {
       string path = Path.Combine( "sounds", tag.Name );
       Directory.CreateDirectory( path );
-      int listCount = tag.Items.Count;
+      int listCount = tag.Entries.Count;
 
       for ( int i = 0; i < args.Count(); i++ )
       {
         DownloadAudio( args[i], Path.Combine( path, ( listCount + i ) + ".mp3" ), client );
-        tag.Items.Add( args[i] );
+        tag.Entries.Add( args[i] );
       }
     }
     private void AddUrlToTag( Tag tag, string[] args )
     {
-      tag.Items.AddRange( args );
+      tag.Entries.AddRange( args );
     }
     private int RemoveTagEntry( Tag tag, string[] args )
     {
@@ -373,7 +371,7 @@ namespace NerdyBot.Commands
           text += " " + args[i];
 
         foreach ( string entry in text.Split( new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries ) )
-          if ( tag.Items.Remove( entry ) )
+          if ( tag.Entries.Remove( entry ) )
             remCount++;
 
         break;
@@ -381,10 +379,10 @@ namespace NerdyBot.Commands
       case TagType.Url:
         for ( int i = 0; i < args.Count(); i++ )
         {
-          int idx = tag.Items.FindIndex( s => s == args[i] );
+          int idx = tag.Entries.FindIndex( s => s == args[i] );
           if ( idx >= 0 )
           {
-            tag.Items.RemoveAt( idx );
+            tag.Entries.RemoveAt( idx );
             remCount++;
             if ( tag.Type == TagType.Sound )
               File.Delete( Path.Combine( "sounds", tag.Name, idx + ".mp3" ) );
@@ -450,7 +448,7 @@ namespace NerdyBot.Commands
     {
       string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
       if ( !File.Exists( path ) )
-        DownloadAudio( tag.Items[idx], path, client );
+        DownloadAudio( tag.Entries[idx], path, client );
 
       lock ( playing )
       {
