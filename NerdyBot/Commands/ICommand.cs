@@ -8,7 +8,8 @@ namespace NerdyBot.Commands
   {
     string Key { get; }
     IEnumerable<string> Aliases { get; }
-    bool NeedAdmin { get; }
+    List<ulong> RestrictedRoles { get; }
+    Config.RestrictType RestrictionType { get; set; }
     void Init();
     Task Execute( MessageEventArgs msg, string[] args, IClient client );
   }

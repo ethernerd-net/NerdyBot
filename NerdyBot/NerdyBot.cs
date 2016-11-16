@@ -44,6 +44,8 @@ namespace NerdyBot
       InitCommands();
     }
 
+    private string[] preservedKeys = new string[] { "perm" };
+
     private List<ICommand> commands = new List<ICommand>();
     private void InitCommands()
     {
@@ -56,16 +58,16 @@ namespace NerdyBot
           if ( type.GetInterface( "ICommand" ) != null )
           {
             ICommand command = ( ICommand )Activator.CreateInstance( type, null, null );
-            if ( this.commands.Any( cmd => cmd.Key == command.Key || cmd.Aliases.Any( a => a == command.Key || command.Aliases.Any( al => a == al ) ) ) )
-              throw new ArgumentException( "Duplikated command key or alias: " + command.Key );
+            if ( preservedKeys.Contains( command.Key ) || this.commands.Any( cmd => cmd.Key == command.Key || cmd.Aliases.Any( a => a == command.Key || command.Aliases.Any( al => a == al ) ) ) )
+              throw new InvalidOperationException( "Duplikated command key or alias: " + command.Key );
             command.Init();
             this.commands.Add( command );
           }
         }
       }
-      catch ( Exception )
+      catch ( Exception ex )
       {
-        // throw new InvalidOperationException(ex);
+        throw new InvalidOperationException( "Schade",  ex);
       }
     }
 
@@ -78,19 +80,124 @@ namespace NerdyBot
       if ( e.Message.Text.StartsWith( cfg.Prefix.ToString() ) )
       {
         string[] args = e.Message.Text.Substring(1).Split( ' ' );
-        foreach ( var cmd in this.commands )
+        if ( args[0] == "perm" )
+          RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
+        else
         {
-          if ( args[0] == cmd.Key || cmd.Aliases.Any( a => args[0] == a ) )
+          foreach ( var cmd in this.commands )
           {
-            isCommand = true;
-            //TODO: Rolllen Checken
-            cmd.Execute( e, args.Skip( 1 ).ToArray(), this );
+            if ( args[0] == cmd.Key || cmd.Aliases.Any( a => args[0] == a ) )
+            {
+              isCommand = true;
+              if ( CanExecute( e.User, cmd ) )
+                cmd.Execute( e, args.Skip( 1 ).ToArray(), this );
+            }
           }
         }
       }
 
       if ( isCommand )
         e.Message.Delete();
+    }
+
+    private bool CanExecute( User user, ICommand cmd )
+    {
+      bool ret = false;
+      if ( user.ServerPermissions.Administrator )
+        return true;
+
+      switch ( cmd.RestrictionType )
+      {
+      case Commands.Config.RestrictType.Admin:
+        ret = false;
+        break;
+      case Commands.Config.RestrictType.None:
+        ret = true;
+        break;
+      case Commands.Config.RestrictType.Allow:
+        ret = ( cmd.RestrictedRoles.Count() == 0 || user.Roles.Any( r => cmd.RestrictedRoles.Any( id => r.Id == id ) ) );
+        break;
+      case Commands.Config.RestrictType.Deny:
+        ret = ( cmd.RestrictedRoles.Count() == 0 || !user.Roles.Any( r => cmd.RestrictedRoles.Any( id => r.Id == id ) ) );
+        break;
+      default:
+        throw new InvalidOperationException( "WTF?!?!" );
+      }
+      return ret;
+    }
+
+    private void RestrictCommandByRole( MessageEventArgs e, string[] args )
+    {
+      if ( e.User.ServerPermissions.Administrator )
+      {
+        switch ( args[0].ToLower() )
+        {
+        case "add":
+        case "rem":
+          if ( args.Count() != 3 )
+            WriteInfo( "Äh? Ich glaube die Parameteranzahl stimmt so nicht!" );
+          else
+          {
+            var role = e.Server.Roles.FirstOrDefault( r => r.Name == args[1] );
+            var cmd = this.commands.FirstOrDefault( c => c.Key == args[2] );
+            if ( cmd == null )
+              WriteInfo( "Command nicht gefunden!" );
+            else
+            {
+              if ( cmd.RestrictedRoles.Contains( role.Id ) )
+              {
+                if ( args[0] == "rem" )
+                  cmd.RestrictedRoles.Remove( role.Id );
+              }
+              else
+              {
+                if ( args[0] == "add" )
+                  cmd.RestrictedRoles.Add( role.Id );
+              }
+              WriteInfo( "Permissions updated for " + cmd.Key, e.Channel );
+            }
+          }
+          break;
+        case "type":
+          if ( args.Count() != 3 )
+            WriteInfo( "Äh? Ich glaube die Parameteranzahl stimmt so nicht!" );
+          else
+          {
+            var cmd = this.commands.FirstOrDefault( c => c.Key == args[2] );
+            switch ( args[1].ToLower() )
+            {
+            case "admin":
+              cmd.RestrictionType = Commands.Config.RestrictType.Admin;
+              break;
+            case "none":
+              cmd.RestrictionType = Commands.Config.RestrictType.None;
+              break;
+            case "deny":
+              cmd.RestrictionType = Commands.Config.RestrictType.Deny;
+              break;
+            case "allow":
+              cmd.RestrictionType = Commands.Config.RestrictType.Allow;
+              break;
+            default:
+              WriteInfo( args[1] + " ist ein invalider Parameter", e.Channel );
+              return;
+            }
+            WriteInfo( "Permissions updated for " + cmd.Key, e.Channel );
+          }
+          break;
+        case "help":
+          //TODO HELP
+          break;
+        default:
+          WriteInfo( "Invalider Parameter!" );
+          break;
+        }
+
+      }
+      else
+      {
+        WriteInfo( "Du bist zu unwichtig dafür!" );
+      }
     }
 
     private void LogHandler( object sender, LogMessageEventArgs e )

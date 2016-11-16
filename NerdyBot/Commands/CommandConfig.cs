@@ -4,7 +4,6 @@ using System.IO;
 
 namespace NerdyBot.Commands.Config
 {
-
   public class CommandConfig<T>
   {
     private string filePath;
@@ -15,12 +14,16 @@ namespace NerdyBot.Commands.Config
       this.Items = new List<T>();
       this.Key = key;
       this.Aliases = aliases;
+      this.RestrictedRoles = new List<ulong>();
+      this.RestrictionType = RestrictType.None;
 
       Read();
     }
 
     public string Key { get; private set; }
     public IEnumerable<string> Aliases { get; private set; }
+    public List<ulong> RestrictedRoles { get; private set; }
+    public RestrictType RestrictionType { get; set; }
     public List<T> Items { get; set; }
 
     private object lck = new object();
@@ -38,8 +41,11 @@ namespace NerdyBot.Commands.Config
         var cfg = JsonConvert.DeserializeObject<CommandConfig<T>>( File.ReadAllText( this.filePath ) );
         this.Key = cfg.Key;
         this.Aliases = cfg.Aliases;
+        this.RestrictedRoles = cfg.RestrictedRoles;
+        this.RestrictionType = cfg.RestrictionType;
         this.Items = cfg.Items;
       }
     }
   }
+  public enum RestrictType { None = 0, Allow = 1, Deny = 2, Admin = 3 }
 }
