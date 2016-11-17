@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using NerdyBot.Commands.Config;
+using System.Text;
 
 namespace NerdyBot.Commands
 {
@@ -30,6 +31,17 @@ namespace NerdyBot.Commands
           string answer = string.Join( " ", args.Skip( 1 ) );
           this.conf.Items.Add( answer );
           this.conf.Write();
+        }
+        else if ( args[0] == "help" )
+        {
+          StringBuilder sb = new StringBuilder();
+          sb.AppendLine( "======== 8Ball ========" );
+          sb.AppendLine();
+          sb.AppendLine( "Magic 8Ball beantwortet dir jede GESCHLOSSENE Frage, die du an ihn richtest" );
+          sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
+          sb.AppendLine();
+          sb.AppendLine( "Beispiel: " + client.Config.Prefix + this.conf.Key + " [FRAGE]" );
+          msg.User.SendMessage( "```" + sb.ToString() + "```" );
         }
         else
         {

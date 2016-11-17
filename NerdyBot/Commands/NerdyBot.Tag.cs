@@ -92,6 +92,10 @@ namespace NerdyBot.Commands
           stop = true;
           break;
 
+        case "help":
+          WriteHelp( msg.User, client.Config.Prefix );
+          break;
+
         default:
           if ( args.Count() == 1 )
           {
@@ -105,6 +109,49 @@ namespace NerdyBot.Commands
       }, TaskCreationOptions.None );
     }
     #endregion ICommand
+
+    private void WriteHelp( User usr, char prefix )
+    {
+      StringBuilder sb = new StringBuilder();
+      sb.AppendLine( "======== TAG ========" );
+      sb.AppendLine();
+      sb.AppendLine( "Der Tag Command erlaubt es Tags ( Sound | Text | URL ) zu erstellen, diese verhalten sich in etwa wie Textbausteine." );
+      sb.AppendLine( "Ein Textbaustein kann mehrere Elemente des selben Typs enthalten, beim Aufruf des Tags wird dann zufällig ein Eintrag gewählt." );
+      sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
+      sb.AppendLine();
+      sb.AppendLine();
+      sb.AppendLine( "===> create" );
+      sb.AppendLine( prefix + this.conf.Key + " create [tagname] [typ] {liste}" );
+      sb.AppendLine( "tagname: Einzigartiger Name zum identifizieren des Bausteins" );
+      sb.AppendLine( "typ: sound | text | url" );
+      sb.AppendLine( "liste: leerzeichen getrennte liste an urls / texte sind getrennt durch ';;' (ohne '')" );
+      sb.AppendLine();
+      sb.AppendLine( "===> delete" );
+      sb.AppendLine( prefix + this.conf.Key + " delete [tagname]" );
+      sb.AppendLine( "Löscht einen Tag und dazugehörige Elemente" );
+      sb.AppendLine();
+      sb.AppendLine( "===> edit" );
+      sb.AppendLine( prefix + this.conf.Key + " edit [tagname] [option] {}" );
+      sb.AppendLine( "option: add | remove | rename" );
+      sb.AppendLine( " -> add: Wie beim create kann hier eine Liste an URLs/Text angehängt werden um den Baustein zu erweitern" );
+      sb.AppendLine( " -> remove: Entfernt den entsprechenden Text/Url aus der Inventar des Tags" );
+      sb.AppendLine( " -> rename: Erlaubt das umbenennen des kompletten Tags" );
+      sb.AppendLine();
+      sb.AppendLine( "===> list" );
+      sb.AppendLine( prefix + this.conf.Key + " list" );
+      sb.AppendLine( "Listet alle vorhandenen Tags auf" );
+      sb.AppendLine();
+      sb.AppendLine( "===> stop" );
+      sb.AppendLine( prefix + this.conf.Key + " stop" );
+      sb.AppendLine( "Stopt das abspielen eines Sound Tags" );
+      sb.AppendLine();
+      sb.AppendLine( "===> help" );
+      sb.AppendLine( prefix + this.conf.Key + " help" );
+      sb.AppendLine( ">_>" );
+      sb.AppendLine();
+      sb.AppendLine();
+      usr.SendMessage( "```" + sb.ToString() + "```" );
+    }
 
     private string GetTypeString( TagType type )
     {
@@ -123,10 +170,8 @@ namespace NerdyBot.Commands
 
     private async void Create( MessageEventArgs msg, string[] args, IClient client )
     {
-      if ( this.conf.Items.Exists( t => t.Name == args[1].ToLower() ) )
-        client.WriteInfo( "Tag '" + args[1] + "' existiert bereits!!", msg.Channel );
-      else if ( KeyWords.Contains( args[1].ToLower() ) )
-        client.WriteInfo( args[1] + "' ist ein reservierter Tag!!", msg.Channel );
+      if ( !IsValidName( args[1].ToLower() ) )
+        client.WriteInfo( "Tag '" + args[1] + "' existiert bereits oder ist reserviert!!", msg.Channel );
       else
       {
         Tag tag = new Tag();
@@ -207,13 +252,14 @@ namespace NerdyBot.Commands
             default:
               throw new ArgumentException( "WTF?!?!" );
             }
+            client.WriteInfo( entries.Count() + " Einträge zu '" + tag.Name + " hinzugefügt'!", msg.Channel );
             break;
           case "remove":
             int remCount = RemoveTagEntry( tag, entries );
             client.WriteInfo( remCount + " / " + entries.Count() + " removed", msg.Channel );
             break;
           case "rename":
-            if ( this.conf.Items.FirstOrDefault( t => t.Name == entries[0] ) == null )
+            if ( !IsValidName( entries[0].ToLower() ) )
             {
               if ( tag.Type != TagType.Text )
               {
@@ -221,9 +267,10 @@ namespace NerdyBot.Commands
                 Directory.Move( Path.Combine( dirName, tag.Name ), Path.Combine( dirName, entries[0] ) );
               }
               tag.Name = entries[0];
+              client.WriteInfo( "Tag umbenannt in '" + tag.Name + "'!", msg.Channel );
             }
             else
-              client.WriteInfo( "Tag Name '" + entries[0] + "' wird bereits verwendet!", msg.Channel );
+              client.WriteInfo( "Tag '" + args[1] + "' existiert bereits oder ist reserviert!!", msg.Channel );
             break;
           case "volume":
             break;
@@ -342,6 +389,10 @@ namespace NerdyBot.Commands
       }
     }
 
+    private bool IsValidName( string name )
+    {
+      return !( this.conf.Items.Exists( t => t.Name == name ) || KeyWords.Contains( name ) );
+    }
     private void AddTextToTag( Tag tag, string[] args )
     {
       string text = string.Empty;

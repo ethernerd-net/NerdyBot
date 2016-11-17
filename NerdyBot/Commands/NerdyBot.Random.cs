@@ -80,12 +80,10 @@ namespace NerdyBot.Commands
             sb.AppendLine( "======== RANDOM ========" );
             sb.AppendLine();
             sb.AppendLine( "Der Random Command (random|rand|rnd) gibt, je nach Sub-Parameter, einen zufälligen Output zurück." );
+            sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
             sb.AppendLine();
-            sb.AppendLine( "Liste der Parameter:" );
-            sb.AppendLine( "cat | penguin | bunny | chuck | joke | yomomma | quote | help" );
-            sb.AppendLine();
-            sb.AppendLine();
-            sb.AppendLine( "Beispiel: " + client.Config.Prefix + "rnd cat" );
+            sb.AppendLine( client.Config.Prefix + this.conf.Key + " [option]" );
+            sb.AppendLine( "option: cat | penguin | bunny | chuck | joke | yomomma | quote | help" );
             msg.User.SendMessage( "```" + sb.ToString() + "```" );
             break;
 
