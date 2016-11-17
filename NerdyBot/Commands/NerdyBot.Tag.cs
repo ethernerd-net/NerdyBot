@@ -83,10 +83,7 @@ namespace NerdyBot.Commands
 
         default:
           if ( args.Count() == 1 )
-          {
-            client.StopPlaying = false;
             Send( msg, args, client );
-          }
           else
             client.WriteInfo( "Invalid parameter count, check help for... guess what?", msg.Channel );
           break;
@@ -368,6 +365,7 @@ namespace NerdyBot.Commands
         case TagType.Sound:
           if ( msg.User.VoiceChannel != null )
           {
+            client.StopPlaying = false;
             string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
             if ( !File.Exists( path ) )
               client.DownloadAudio( tag.Entries[idx], path );
@@ -450,92 +448,5 @@ namespace NerdyBot.Commands
       }
       return remCount;
     }
-
-    /*private void DownloadAudio( string url, string outp, IClient client )
-    {
-      try
-      {
-        bool transform = false;
-        string ext = Path.GetExtension( url );
-        client.Log( "downloading " + url );
-        if ( ext != string.Empty )
-        {
-          string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp" + ext );
-          if ( ext == ".mp3" )
-            tempOut = outp;
-
-          ( new WebClient() ).DownloadFile( url, tempOut );
-
-          transform = ( ext != ".mp3" );
-        }
-        else
-        {
-          string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp.%(ext)s" );
-          ProcessStartInfo ytdl = new System.Diagnostics.ProcessStartInfo();
-          ytdl.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-          ytdl.FileName = "ext\\youtube-dl.exe";
-
-          ytdl.Arguments = "--extract-audio --audio-quality 0 --no-playlist --output \"" + tempOut + "\" \"" + url + "\"";
-          Process.Start( ytdl ).WaitForExit();
-          transform = true;
-        }
-        if ( transform )
-        {
-          string tempFIle = Directory.GetFiles( Path.GetDirectoryName( outp ), "temp.*", SearchOption.TopDirectoryOnly ).First();
-
-          ProcessStartInfo ffmpeg = new System.Diagnostics.ProcessStartInfo();
-          ffmpeg.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-          ffmpeg.FileName = "ext\\ffmpeg.exe";
-
-          ffmpeg.Arguments = "-i " + tempFIle + " -f mp3 " + outp;
-          Process.Start( ffmpeg ).WaitForExit();
-
-          File.Delete( tempFIle );
-        }
-      }
-      catch ( Exception ex )
-      {
-        throw new ArgumentException( ex.Message );
-      }
-    }*/
-
-    /*private async void SendAudio( AudioService audio, Channel vChannel, Tag tag, int idx, IClient client )
-    {
-      string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
-      if ( !File.Exists( path ) )
-        DownloadAudio( tag.Entries[idx], path, client );
-
-      lock ( playing )
-      {
-        IAudioClient vClient = audio.Join( vChannel ).Result;
-        client.Log( "reading " + tag.Name );
-        var channelCount = client.GetService<AudioService>().Config.Channels; // Get the number of AudioChannels our AudioService has been configured to use.
-        var OutFormat = new WaveFormat(48000, 16, channelCount); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
-        using ( var MP3Reader = new Mp3FileReader( path ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
-        using ( var resampler = new MediaFoundationResampler( MP3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
-        {
-          resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
-
-          int blockSize = OutFormat.AverageBytesPerSecond / 50; // Establish the size of our AudioBuffer
-          byte[] buffer = new byte[blockSize];
-          int byteCount;
-
-          client.Log( "start sending audio: " + tag.Name );
-          while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && !stop ) // Read audio into our buffer, and keep a loop open while data is present
-          {
-            if ( byteCount < blockSize )
-            {
-              // Incomplete Frame
-              for ( int i = byteCount; i < blockSize; i++ )
-                buffer[i] = 0;
-            }
-            vClient.Send( buffer, 0, blockSize ); // Send the buffer to Discord
-          }
-          client.Log( "finished sending" );
-        }
-        vClient.Wait();
-        stop = false;
-      }
-    }*/
   }
 }
