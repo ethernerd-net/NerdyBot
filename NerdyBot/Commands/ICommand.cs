@@ -12,5 +12,6 @@ namespace NerdyBot.Commands
     Config.RestrictType RestrictionType { get; set; }
     void Init();
     Task Execute( MessageEventArgs msg, string[] args, IClient client );
+    string QuickHelp();
   }
 }

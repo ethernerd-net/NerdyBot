@@ -22,6 +22,12 @@ namespace NerdyBot.Commands
     public List<ulong> RestrictedRoles { get { return this.conf.RestrictedRoles; } }
     public RestrictType RestrictionType { get { return this.conf.RestrictionType; } set { this.conf.RestrictionType = value; } }
 
+    public void Init()
+    {
+      this.conf = new TagCommandConfig<string>( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
+      this.conf.Read();
+    }
+
     public Task Execute( MessageEventArgs msg, string[] args, IClient client )
     {
       return Task.Factory.StartNew( () =>
@@ -35,9 +41,7 @@ namespace NerdyBot.Commands
         else if ( args[0] == "help" )
         {
           StringBuilder sb = new StringBuilder();
-          sb.AppendLine( "======== 8Ball ========" );
-          sb.AppendLine();
-          sb.AppendLine( "Magic 8Ball beantwortet dir jede GESCHLOSSENE Frage, die du an ihn richtest" );
+          sb.Append( QuickHelp() );
           sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
           sb.AppendLine();
           sb.AppendLine( "Beispiel: " + client.Config.Prefix + this.conf.Key + " [FRAGE]" );
@@ -53,10 +57,13 @@ namespace NerdyBot.Commands
       } );
     }
 
-    public void Init()
+    public string QuickHelp()
     {
-      this.conf = new TagCommandConfig<string>( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
-      this.conf.Read();
+      StringBuilder sb = new StringBuilder();
+      sb.AppendLine( "======== 8Ball ========" );
+      sb.AppendLine();
+      sb.AppendLine( "Magic 8Ball beantwortet dir jede GESCHLOSSENE Frage, die du an ihn richtest" );
+      return sb.ToString();
     }
     #endregion ICommand
   }

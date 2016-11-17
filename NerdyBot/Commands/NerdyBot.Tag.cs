@@ -108,15 +108,22 @@ namespace NerdyBot.Commands
         }
       }, TaskCreationOptions.None );
     }
-    #endregion ICommand
 
-    private void WriteHelp( User usr, char prefix )
+    public string QuickHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.AppendLine( "======== TAG ========" );
       sb.AppendLine();
       sb.AppendLine( "Der Tag Command erlaubt es Tags ( Sound | Text | URL ) zu erstellen, diese verhalten sich in etwa wie Textbausteine." );
       sb.AppendLine( "Ein Textbaustein kann mehrere Elemente des selben Typs enthalten, beim Aufruf des Tags wird dann zufällig ein Eintrag gewählt." );
+      return sb.ToString();
+    }
+    #endregion ICommand
+
+    private void WriteHelp( User usr, char prefix )
+    {
+      StringBuilder sb = new StringBuilder();
+      sb.Append( QuickHelp() );
       sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
       sb.AppendLine();
       sb.AppendLine();

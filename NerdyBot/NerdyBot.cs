@@ -67,33 +67,44 @@ namespace NerdyBot
       }
       catch ( Exception ex )
       {
-        throw new InvalidOperationException( "Schade",  ex);
+        throw new InvalidOperationException( "Schade", ex );
       }
     }
 
     private async void Discord_MessageReceived( object sender, MessageEventArgs e )
     {
       bool isCommand = false;
-      if ( output == null )
+      if ( output == null && e.Server != null )
         output = e.Server.GetChannel( conf.ResponseChannel );
 
-      if ( e.Message.Text.StartsWith( conf.Prefix.ToString() ) )
+      if ( e.Message.Text.Length > 1 && e.Message.Text.StartsWith( conf.Prefix.ToString() ) )
       {
-        string[] args = e.Message.Text.Substring(1).Split( ' ' );
-        if ( args[0] == "perm" )
-          RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
-        else
+        if ( e.Server != null )
         {
-          foreach ( var cmd in this.commands )
+          string[] args = e.Message.Text.Substring( 1 ).Split( ' ' );
+          if ( args[0] == "perm" )
+            RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
+          else if ( args[0] == "help" )
           {
-            if ( args[0] == cmd.Key || cmd.Aliases.Any( a => args[0] == a ) )
+            string text = string.Empty;
+            this.commands.ForEach( ( cmd ) => text += cmd.QuickHelp() + Environment.NewLine + Environment.NewLine );
+            WriteUser( text, e.User );
+          }
+          else
+          {
+            foreach ( var cmd in this.commands )
             {
-              isCommand = true;
-              if ( CanExecute( e.User, cmd ) )
-                cmd.Execute( e, args.Skip( 1 ).ToArray(), this );
+              if ( args[0] == cmd.Key || cmd.Aliases.Any( a => args[0] == a ) )
+              {
+                isCommand = true;
+                if ( CanExecute( e.User, cmd ) )
+                  cmd.Execute( e, args.Skip( 1 ).ToArray(), this );
+              }
             }
           }
         }
+        else
+          Write( "Ich habe dir hier nichts zu sagen!", e.Channel );
       }
 
       if ( isCommand )
@@ -223,6 +234,11 @@ namespace NerdyBot
       return discord.GetService<T>();
     }
 
+    public async void WriteUser( string text, User usr )
+    {
+      foreach ( string message in ChunkMessage( text ) )
+        usr.SendMessage( "```" + text + "```" );
+    }
     public async void Write( string info, Channel ch = null )
     {
       ch = ch ?? output;
@@ -250,5 +266,14 @@ namespace NerdyBot
       this.discord.Log.Log( LogSeverity.Info, "", text );
     }
     #endregion
+
+    private readonly int chunkSize = 1990;
+    private IEnumerable<string> ChunkMessage( string str )
+    {
+      if ( str.Length > chunkSize )
+        return Enumerable.Range( 0, str.Length / chunkSize )
+          .Select( i => str.Substring( i * chunkSize, chunkSize ) );
+      return new string[] { str };
+    }
   }
 }
