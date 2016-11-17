@@ -141,6 +141,7 @@
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="Commands\NerdyBot.CommandConfigTemplate.cs" />
     <Compile Include="Commands\NerdyBot.Random.cs" />
+    <Compile Include="Commands\NerdyBot.Urban.cs" />
     <Compile Include="Commands\NerdyBot.Youtube.cs" />
     <Compile Include="NerdyBot.BaseConfig.cs" />
     <Compile Include="IClient.cs" />
