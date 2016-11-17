@@ -43,10 +43,11 @@ namespace NerdyBot.Commands
           var searchListRequest = youtubeService.Search.List( "snippet" );
           searchListRequest.Q = string.Join( " ", args ); // Replace with your search term.
           searchListRequest.MaxResults = 1;
+          searchListRequest.Type = "video";
           searchListRequest.Order = SearchResource.ListRequest.OrderEnum.ViewCount;
 
           var searchListResponse = await searchListRequest.ExecuteAsync();
-          var responseItem = searchListResponse.Items.FirstOrDefault();
+          var responseItem = searchListResponse.Items.FirstOrDefault( item => item.Id.Kind == "youtube#video" );
           if ( responseItem != null )
             client.Write( "https://www.youtube.com/watch?v=" + responseItem.Id.VideoId, msg.Channel );
           else
