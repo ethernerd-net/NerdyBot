@@ -71,7 +71,7 @@ namespace NerdyBot.Commands
             string quoteJson = ( new WebClient() ).DownloadString( "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand" );
             var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
             string text = EntityToUnicode( quote.content ).Replace( "<p>", " " ).Replace( "</p>", " " );
-            client.Write( text + Environment.NewLine + Environment.NewLine + "-" + quote.title, msg.Channel );
+            client.WriteBlock( text + Environment.NewLine + Environment.NewLine + "-" + quote.title, "", msg.Channel );
             break;
 
           default:
