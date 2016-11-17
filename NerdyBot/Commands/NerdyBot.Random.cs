@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -72,6 +73,20 @@ namespace NerdyBot.Commands
             var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
             string text = EntityToUnicode( quote.content ).Replace( "<p>", " " ).Replace( "</p>", " " );
             client.WriteBlock( text + Environment.NewLine + Environment.NewLine + "-" + quote.title, "", msg.Channel );
+            break;
+
+          case "help":
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine( "======== RANDOM ========" );
+            sb.AppendLine();
+            sb.AppendLine( "Der Random Command (random|rand|rnd) gibt, je nach Sub-Parameter, einen zufälligen Output zurück." );
+            sb.AppendLine();
+            sb.AppendLine( "Liste der Parameter:" );
+            sb.AppendLine( "cat | penguin | bunny | chuck | joke | yomomma | quote | help" );
+            sb.AppendLine();
+            sb.AppendLine();
+            sb.AppendLine( "Beispiel: " + client.Config.Prefix + "rnd cat" );
+            msg.User.SendMessage( "```" + sb.ToString() + "```" );
             break;
 
           default:
