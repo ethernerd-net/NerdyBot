@@ -265,6 +265,9 @@ namespace NerdyBot
           if ( ext == ".mp3" )
             tempOut = outp;
 
+          if ( !Directory.Exists( Path.GetDirectoryName( tempOut ) ) )
+            Directory.CreateDirectory( Path.GetDirectoryName( tempOut ) );
+
           ( new WebClient() ).DownloadFile( url, tempOut );
 
           transform = ( ext != ".mp3" );
@@ -299,7 +302,7 @@ namespace NerdyBot
         throw new ArgumentException( ex.Message );
       }
     }
-    public async void SendAudio( Channel vChannel, string localPath )
+    public async void SendAudio( Channel vChannel, string localPath, bool delAfterPlay = false )
     {
       lock ( playing )
       {
@@ -331,6 +334,8 @@ namespace NerdyBot
         }
         vClient.Wait();
         StopPlaying = false;
+        if ( delAfterPlay )
+          File.Delete( localPath );
       }
     }
 
