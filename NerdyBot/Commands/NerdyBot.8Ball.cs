@@ -58,6 +58,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "======== 8Ball ========" );
       sb.AppendLine();
       sb.AppendLine( "Magic 8Ball beantwortet dir jede GESCHLOSSENE Frage, die du an ihn richtest" );
+      sb.AppendLine( "Key: " + this.conf.Key );
       return sb.ToString();
     }
     #endregion ICommand

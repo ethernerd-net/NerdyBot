@@ -54,6 +54,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "======== Youtube ========" );
       sb.AppendLine();
       sb.AppendLine( "Der Youtube Befehlt ermöglicht eine 'Auf gut Glück'-Suche." );
+      sb.AppendLine( "Key: " + this.conf.Key );
       return sb.ToString();
     }
     #endregion ICommand

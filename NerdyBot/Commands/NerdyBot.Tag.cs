@@ -112,6 +112,7 @@ namespace NerdyBot.Commands
       sb.AppendLine();
       sb.AppendLine( "Der Tag Command erlaubt es Tags ( Sound | Text | URL ) zu erstellen, diese verhalten sich in etwa wie Textbausteine." );
       sb.AppendLine( "Ein Textbaustein kann mehrere Elemente des selben Typs enthalten, beim Aufruf des Tags wird dann zufällig ein Eintrag gewählt." );
+      sb.AppendLine( "Key: " + this.conf.Key );
       return sb.ToString();
     }
     #endregion ICommand

@@ -102,6 +102,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "======== RANDOM ========" );
       sb.AppendLine();
       sb.AppendLine( "Der Random Command gibt, je nach Sub-Parameter, einen zufälligen Output zurück." );
+      sb.AppendLine( "Key: " + this.conf.Key );
       return sb.ToString();
     }
     #endregion ICommand
