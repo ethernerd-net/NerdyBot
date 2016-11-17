@@ -11,6 +11,7 @@ namespace NerdyBot
       if ( fileName != null )
         this.filePath = Path.Combine( "conf", fileName + ".json" );
     }
+    public string FilePath { get { return this.filePath; } }
     private object lck = new object();
     public void Write()
     {

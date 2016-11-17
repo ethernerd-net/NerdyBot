@@ -15,9 +15,9 @@ namespace NerdyBot
 {
   partial class NerdyBot : IClient
   {
-    DiscordClient discord;
+    DiscordClient client;
     AudioService audio;
-    Channel output;
+    Channel stdOutChannel;
     MainConfig conf;
 
     private object playing = new object();
@@ -29,26 +29,25 @@ namespace NerdyBot
       conf = new MainConfig( MAINCFG );
       conf.Read();
 
-      discord = new DiscordClient( x =>
+      client = new DiscordClient( x =>
        {
          x.LogLevel = LogSeverity.Info;
          x.LogHandler = LogHandler;
        } );
 
-      discord.UsingCommands( x =>
+      client.UsingCommands( x =>
       {
         x.PrefixChar = conf.Prefix;
         x.AllowMentionPrefix = true;
       } );
 
-      discord.MessageReceived += Discord_MessageReceived;
+      client.MessageReceived += Discord_MessageReceived;
 
-      discord.UsingAudio( x =>
+      client.UsingAudio( x =>
       {
         x.Mode = AudioMode.Outgoing;
       } );
       this.audio = GetService<AudioService>();
-      InitCommands();
     }
 
     private string[] preservedKeys = new string[] { "perm", "help", "stop", "leave", "join" };
@@ -81,8 +80,8 @@ namespace NerdyBot
     private async void Discord_MessageReceived( object sender, MessageEventArgs e )
     {
       bool isCommand = false;
-      if ( output == null && e.Server != null )
-        output = e.Server.GetChannel( conf.ResponseChannel );
+      if ( stdOutChannel == null && e.Server != null )
+        stdOutChannel = e.Server.GetChannel( conf.ResponseChannel );
 
       if ( e.Message.Text.Length > 1 && e.Message.Text.StartsWith( conf.Prefix.ToString() ) )
       {
@@ -99,9 +98,7 @@ namespace NerdyBot
             WriteUser( text, e.User );
           }
           else if ( input == "stop" )
-          {
             this.StopPlaying = true;
-          }
           else
           {
             foreach ( var cmd in this.commands )
@@ -241,10 +238,11 @@ namespace NerdyBot
 
     public void Start()
     {
-      discord.ExecuteAndWait( async () =>
+      InitCommands();
+      client.ExecuteAndWait( async () =>
        {
-         await discord.Connect( conf.Token, TokenType.Bot );
-         discord.SetGame( "Not nerdy at all" );
+         await client.Connect( conf.Token, TokenType.Bot );
+         client.SetGame( "Not nerdy at all" );
        } );
     }
 
@@ -341,7 +339,7 @@ namespace NerdyBot
 
     public T GetService<T>() where T : class, IService
     {
-      return discord.GetService<T>();
+      return client.GetService<T>();
     }
 
     public async void WriteUser( string text, User usr )
@@ -351,17 +349,17 @@ namespace NerdyBot
     }
     public async void Write( string info, Channel ch = null )
     {
-      ch = ch ?? output;
+      ch = ch ?? stdOutChannel;
       ch.SendMessage( info );
     }
     public async void WriteInfo( string info, Channel ch = null )
     {
-      ch = ch ?? output;
+      ch = ch ?? stdOutChannel;
       ch.SendMessage( "`" + info + "`" );
     }
     public async void WriteBlock( string info, string highlight = "", Channel ch = null )
     {
-      ch = ch ?? output;
+      ch = ch ?? stdOutChannel;
       if ( info.Length + highlight.Length + 6 > 2000 )
       {
         File.WriteAllText( "raw.txt", info );
@@ -373,7 +371,7 @@ namespace NerdyBot
     }
     public void Log( string text )
     {
-      this.discord.Log.Log( LogSeverity.Info, "", text );
+      this.client.Log.Log( LogSeverity.Info, "", text );
     }
     #endregion
 
