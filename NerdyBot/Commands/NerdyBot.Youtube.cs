@@ -28,15 +28,9 @@ namespace NerdyBot.Commands
 
     public Task Execute( MessageEventArgs msg, string[] args, IClient client )
     {
-      return Task.Factory.StartNew( () =>
+      return Task.Factory.StartNew( async () =>
       {
-        var youtubeService = new YouTubeService( new BaseClientService.Initializer()
-        {
-          ApiKey = "AIzaSyAmrg8abuMO0esvieSZCdduxqog815QRnY",
-          ApplicationName = this.GetType().ToString()
-        } );
-
-        if ( args[0] == "help" )
+        if ( args.Length == 1 && args[0] == "help" )
         {
           StringBuilder sb = new StringBuilder();
           sb.Append( QuickHelp() );
@@ -44,6 +38,27 @@ namespace NerdyBot.Commands
           sb.AppendLine();
           sb.AppendLine( "Beispiel: " + client.Config.Prefix + this.conf.Key + " [KEYWORDS]" );
           msg.User.SendMessage( "```" + sb.ToString() + "```" );
+        }
+        else
+        {
+
+          var youtubeService = new YouTubeService( new BaseClientService.Initializer()
+          {
+            ApiKey = "AIzaSyAmrg8abuMO0esvieSZCdduxqog815QRnY",
+            ApplicationName = this.GetType().ToString()
+          } );
+
+          var searchListRequest = youtubeService.Search.List( "snippet" );
+          searchListRequest.Q = string.Join( " ", args ); // Replace with your search term.
+          searchListRequest.MaxResults = 1;
+          searchListRequest.Order = SearchResource.ListRequest.OrderEnum.ViewCount;
+
+          var searchListResponse = await searchListRequest.ExecuteAsync();
+          var responseItem = searchListResponse.Items.FirstOrDefault();
+          if ( responseItem != null )
+            client.Write( "https://www.youtube.com/watch?v=" + responseItem.Id.VideoId, msg.Channel );
+          else
+            client.WriteInfo( "Und ich dachte es gibt alles auf youtube", msg.Channel );        
         }
       } );
     }
