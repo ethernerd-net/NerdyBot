@@ -135,6 +135,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\NerdyBot.8Ball.Config.cs" />
     <Compile Include="Commands\NerdyBot.8Ball.cs" />
     <Compile Include="Commands\NerdyBot.BaseCommandConfig.cs" />
     <Compile Include="Commands\ICommand.cs" />

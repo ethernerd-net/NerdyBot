@@ -12,21 +12,17 @@ namespace NerdyBot.Commands
 {
   class YoutubeCommand : ICommand
   {
-    private const string CFGPATH = "youtube.json";
     private const string DEFAULTKEY = "youtube";
     private static readonly string[] DEFAULTALIASES = new string[] { "yt" };
 
     private BaseCommandConfig conf;
 
     #region ICommand
-    public string Key { get { return this.conf.Key; } }
-    public IEnumerable<string> Aliases { get { return this.conf.Aliases; } }
-    public List<ulong> RestrictedRoles { get { return this.conf.RestrictedRoles; } }
-    public RestrictType RestrictionType { get { return this.conf.RestrictionType; } set { this.conf.RestrictionType = value; } }
+    public BaseCommandConfig Config { get { return this.conf; } }
 
     public void Init()
     {
-      this.conf = new TagCommandConfig<string>( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
+      this.conf = new BaseCommandConfig( DEFAULTKEY, DEFAULTALIASES );
       this.conf.Read();
     }
 

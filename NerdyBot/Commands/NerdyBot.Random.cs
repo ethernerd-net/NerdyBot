@@ -13,22 +13,17 @@ namespace NerdyBot.Commands
 {
   class RandomTag : ICommand
   {
-    private const string CFGPATH = "";
     private const string DEFAULTKEY = "random";
     private static readonly string[] DEFAULTALIASES = new string[] { "rnd", "rand" };
 
     private BaseCommandConfig conf;
 
     #region ICommand
-    public string Key { get { return this.conf.Key; } }
-    public IEnumerable<string> Aliases { get { return this.conf.Aliases; } }
-    public List<ulong> RestrictedRoles { get { return this.conf.RestrictedRoles; } }
-    public RestrictType RestrictionType { get { return this.conf.RestrictionType; } set { this.conf.RestrictionType = value; } }
-
+    public BaseCommandConfig Config { get { return this.conf; } }
 
     public void Init()
     {
-      this.conf = new BaseCommandConfig( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
+      this.conf = new BaseCommandConfig( DEFAULTKEY, DEFAULTALIASES );
       //this.conf.Read();
     }
 

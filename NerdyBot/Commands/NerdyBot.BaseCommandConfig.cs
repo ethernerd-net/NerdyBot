@@ -5,8 +5,8 @@ namespace NerdyBot.Commands.Config
 {
   public class BaseCommandConfig : BaseConfig
   {
-    public BaseCommandConfig( string fileName, string defaultKey, params string[] aliases )
-      :base( fileName )
+    public BaseCommandConfig( string defaultKey, params string[] aliases )
+      :base( defaultKey )
     {      
       this.Key = defaultKey;
       this.Aliases = aliases;
@@ -31,4 +31,5 @@ namespace NerdyBot.Commands.Config
       this.RestrictionType = conf.RestrictionType;
     }
   }
+  public enum RestrictType { None = 0, Allow = 1, Deny = 2, Admin = 3 }
 }

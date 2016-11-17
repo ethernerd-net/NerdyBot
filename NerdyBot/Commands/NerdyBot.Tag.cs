@@ -15,8 +15,7 @@ namespace NerdyBot.Commands
 {
   class TagCommand : ICommand
   {
-    private TagCommandConfig<Tag> conf;
-    private const string CFGPATH = "tag.json";
+    private CommandConfig<TagConfig> conf;
     private const string DEFAULTKEY = "tag";
     private static readonly string[] DEFAULTALIASES = new string[] { "t" };
 
@@ -32,14 +31,11 @@ namespace NerdyBot.Commands
     }
 
     #region ICommand
-    public string Key { get { return this.conf.Key; } }
-    public IEnumerable<string> Aliases { get { return this.conf.Aliases; } }
-    public List<ulong> RestrictedRoles { get { return this.conf.RestrictedRoles; } }
-    public RestrictType RestrictionType { get { return this.conf.RestrictionType; } set { this.conf.RestrictionType = value; } }
+    public BaseCommandConfig Config { get { return this.conf; } }
 
     public void Init()
     {
-      this.conf = new TagCommandConfig<Tag>( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
+      this.conf = new CommandConfig<TagConfig>( DEFAULTKEY, DEFAULTALIASES );
       this.conf.Read();
     }
 
@@ -209,7 +205,7 @@ namespace NerdyBot.Commands
           client.WriteInfo( args[2] + " ist ein invalider Parameter", msg.Channel );
           return;
         }
-        this.conf.Items.Add( tag );
+        this.conf.Ext.Tags.Add( tag );
         this.conf.Write();
         client.WriteInfo( "Tag '" + tag.Name + "' erstellt!", msg.Channel );
       }
@@ -217,7 +213,7 @@ namespace NerdyBot.Commands
 
     private async void Delete( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
       else
@@ -225,7 +221,7 @@ namespace NerdyBot.Commands
         if ( tag.Type == TagType.Sound )
           Directory.Delete( Path.Combine( "sounds", tag.Name ), true );
 
-        this.conf.Items.Remove( tag );
+        this.conf.Ext.Tags.Remove( tag );
         this.conf.Write();
         client.WriteInfo( "Tag '" + tag.Name + "' delete!", msg.Channel );
       }
@@ -233,7 +229,7 @@ namespace NerdyBot.Commands
 
     private async void Edit( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
       else
@@ -294,7 +290,7 @@ namespace NerdyBot.Commands
 
     private async void List( MessageEventArgs msg, IClient client )
     {
-      var tagsInOrder = this.conf.Items.OrderBy( x => x.Name );
+      var tagsInOrder = this.conf.Ext.Tags.OrderBy( x => x.Name );
       StringBuilder sb = new StringBuilder( "" );
       if ( tagsInOrder.Count() > 0 )
       {
@@ -320,7 +316,7 @@ namespace NerdyBot.Commands
 
     private async void Info( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[1] + " existiert nicht!", msg.Channel );
       else
@@ -350,7 +346,7 @@ namespace NerdyBot.Commands
 
     private async void Raw( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[1] + " existiert nicht!", msg.Channel );
       else
@@ -368,7 +364,7 @@ namespace NerdyBot.Commands
 
     private async void Send( MessageEventArgs msg, string[] args, IClient client )
     {
-      var tag = this.conf.Items.FirstOrDefault( t => t.Name == args[0].ToLower() );
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[0].ToLower() );
       if ( tag == null )
         client.WriteInfo( args[0] + " existiert nicht!", msg.Channel );
       else
@@ -398,7 +394,7 @@ namespace NerdyBot.Commands
 
     private bool IsValidName( string name )
     {
-      return !( this.conf.Items.Exists( t => t.Name == name ) || KeyWords.Contains( name ) );
+      return !( this.conf.Ext.Tags.Exists( t => t.Name == name ) || KeyWords.Contains( name ) );
     }
     private void AddTextToTag( Tag tag, string[] args )
     {

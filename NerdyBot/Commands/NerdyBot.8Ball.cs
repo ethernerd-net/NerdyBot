@@ -10,21 +10,17 @@ namespace NerdyBot.Commands
 {
   class Ball8 : ICommand
   {
-    private const string CFGPATH = "8ball.json";
     private const string DEFAULTKEY = "8ball";
     private static readonly string[] DEFAULTALIASES = new string[] { "8b" };
 
-    private TagCommandConfig<string> conf;
+    private CommandConfig<Ball8Config> conf;
 
     #region ICommand
-    public string Key { get { return this.conf.Key; } }
-    public IEnumerable<string> Aliases { get { return this.conf.Aliases; } }
-    public List<ulong> RestrictedRoles { get { return this.conf.RestrictedRoles; } }
-    public RestrictType RestrictionType { get { return this.conf.RestrictionType; } set { this.conf.RestrictionType = value; } }
+    public BaseCommandConfig Config { get { return this.conf; } }
 
     public void Init()
     {
-      this.conf = new TagCommandConfig<string>( CFGPATH, DEFAULTKEY, DEFAULTALIASES );
+      this.conf = new CommandConfig<Ball8Config>( DEFAULTKEY, DEFAULTALIASES );
       this.conf.Read();
     }
 
@@ -35,7 +31,7 @@ namespace NerdyBot.Commands
         if ( args[0] == "add" && msg.User.ServerPermissions.Administrator )
         {
           string answer = string.Join( " ", args.Skip( 1 ) );
-          this.conf.Items.Add( answer );
+          this.conf.Ext.Items.Add( answer );
           this.conf.Write();
         }
         else if ( args[0] == "help" )
@@ -49,10 +45,10 @@ namespace NerdyBot.Commands
         }
         else
         {
-          int idx = ( new Random() ).Next( 0, this.conf.Items.Count() );
+          int idx = ( new Random() ).Next( 0, this.conf.Ext.Items.Count() );
           client.Write( msg.User.Mention + " asked: '" + string.Join( " ", args ) +
             Environment.NewLine + Environment.NewLine +
-            "My answer is: " + this.conf.Items[idx], msg.Channel );
+            "My answer is: " + this.conf.Ext.Items[idx], msg.Channel );
         }
       } );
     }

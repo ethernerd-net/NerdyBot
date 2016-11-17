@@ -16,7 +16,7 @@ namespace NerdyBot
     Channel output;
     MainConfig conf;
 
-    private const string MAINCFG = "cfg.json";
+    private const string MAINCFG = "cfg";
 
     public NerdyBot()
     {
@@ -59,8 +59,8 @@ namespace NerdyBot
           {
             ICommand command = ( ICommand )Activator.CreateInstance( type, null, null );
             command.Init();
-            if ( preservedKeys.Contains( command.Key ) || this.commands.Any( cmd => cmd.Key == command.Key || cmd.Aliases.Any( a => a == command.Key || command.Aliases.Any( al => a == al ) ) ) )
-              throw new InvalidOperationException( "Duplicated command key or alias: " + command.Key );
+            if ( !CanLoadCommand( command ) )
+              throw new InvalidOperationException( "Duplicated command key or alias: " + command.Config.Key );
             this.commands.Add( command );
           }
         }
@@ -94,7 +94,7 @@ namespace NerdyBot
           {
             foreach ( var cmd in this.commands )
             {
-              if ( args[0] == cmd.Key || cmd.Aliases.Any( a => args[0] == a ) )
+              if ( args[0] == cmd.Config.Key || cmd.Config.Aliases.Any( a => args[0] == a ) )
               {
                 isCommand = true;
                 if ( CanExecute( e.User, cmd ) )
@@ -117,7 +117,7 @@ namespace NerdyBot
       if ( user.ServerPermissions.Administrator )
         return true;
 
-      switch ( cmd.RestrictionType )
+      switch ( cmd.Config.RestrictionType )
       {
       case Commands.Config.RestrictType.Admin:
         ret = false;
@@ -126,15 +126,26 @@ namespace NerdyBot
         ret = true;
         break;
       case Commands.Config.RestrictType.Allow:
-        ret = ( cmd.RestrictedRoles.Count() == 0 || user.Roles.Any( r => cmd.RestrictedRoles.Any( id => r.Id == id ) ) );
+        ret = ( cmd.Config.RestrictedRoles.Count() == 0 || user.Roles.Any( r => cmd.Config.RestrictedRoles.Any( id => r.Id == id ) ) );
         break;
       case Commands.Config.RestrictType.Deny:
-        ret = ( cmd.RestrictedRoles.Count() == 0 || !user.Roles.Any( r => cmd.RestrictedRoles.Any( id => r.Id == id ) ) );
+        ret = ( cmd.Config.RestrictedRoles.Count() == 0 || !user.Roles.Any( r => cmd.Config.RestrictedRoles.Any( id => r.Id == id ) ) );
         break;
       default:
         throw new InvalidOperationException( "WTF?!?!" );
       }
       return ret;
+    }
+
+    private bool CanLoadCommand( ICommand command )
+    {
+      if ( preservedKeys.Contains( command.Config.Key ) )
+        return false;
+      if ( this.commands.Any( cmd => cmd.Config.Key == command.Config.Key ||
+          cmd.Config.Aliases.Any( ali => ali == command.Config.Key ||
+            command.Config.Aliases.Any( ali2 => ali == ali2 ) ) ) )
+        return false;
+      return true;
     }
 
     private void RestrictCommandByRole( MessageEventArgs e, string[] args )
@@ -150,22 +161,22 @@ namespace NerdyBot
           else
           {
             var role = e.Server.Roles.FirstOrDefault( r => r.Name == args[1] );
-            var cmd = this.commands.FirstOrDefault( c => c.Key == args[2] );
+            var cmd = this.commands.FirstOrDefault( c => c.Config.Key == args[2] );
             if ( cmd == null )
               WriteInfo( "Command nicht gefunden!" );
             else
             {
-              if ( cmd.RestrictedRoles.Contains( role.Id ) )
+              if ( cmd.Config.RestrictedRoles.Contains( role.Id ) )
               {
                 if ( args[0] == "rem" )
-                  cmd.RestrictedRoles.Remove( role.Id );
+                  cmd.Config.RestrictedRoles.Remove( role.Id );
               }
               else
               {
                 if ( args[0] == "add" )
-                  cmd.RestrictedRoles.Add( role.Id );
+                  cmd.Config.RestrictedRoles.Add( role.Id );
               }
-              WriteInfo( "Permissions updated for " + cmd.Key, e.Channel );
+              WriteInfo( "Permissions updated for " + cmd.Config.Key, e.Channel );
             }
           }
           break;
@@ -174,26 +185,26 @@ namespace NerdyBot
             WriteInfo( "Äh? Ich glaube die Parameteranzahl stimmt so nicht!" );
           else
           {
-            var cmd = this.commands.FirstOrDefault( c => c.Key == args[2] );
+            var cmd = this.commands.FirstOrDefault( c => c.Config.Key == args[2] );
             switch ( args[1].ToLower() )
             {
             case "admin":
-              cmd.RestrictionType = Commands.Config.RestrictType.Admin;
+              cmd.Config.RestrictionType = Commands.Config.RestrictType.Admin;
               break;
             case "none":
-              cmd.RestrictionType = Commands.Config.RestrictType.None;
+              cmd.Config.RestrictionType = Commands.Config.RestrictType.None;
               break;
             case "deny":
-              cmd.RestrictionType = Commands.Config.RestrictType.Deny;
+              cmd.Config.RestrictionType = Commands.Config.RestrictType.Deny;
               break;
             case "allow":
-              cmd.RestrictionType = Commands.Config.RestrictType.Allow;
+              cmd.Config.RestrictionType = Commands.Config.RestrictType.Allow;
               break;
             default:
               WriteInfo( args[1] + " ist ein invalider Parameter", e.Channel );
               return;
             }
-            WriteInfo( "Permissions updated for " + cmd.Key, e.Channel );
+            WriteInfo( "Permissions updated for " + cmd.Config.Key, e.Channel );
           }
           break;
         case "help":

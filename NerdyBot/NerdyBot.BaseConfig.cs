@@ -9,7 +9,7 @@ namespace NerdyBot
     public BaseConfig( string fileName )
     {
       if ( fileName != null )
-        this.filePath = Path.Combine( "conf", fileName );
+        this.filePath = Path.Combine( "conf", fileName + ".json" );
     }
     private object lck = new object();
     public void Write()

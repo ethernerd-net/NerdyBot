@@ -4,28 +4,36 @@ using System.Collections.Generic;
 
 namespace NerdyBot.Commands.Config
 {
-  public class TagCommandConfig<T> : BaseCommandConfig
+  public class CommandConfig<T> : BaseCommandConfig where T : new()
   {
-    public TagCommandConfig( string filePath, string key, params string[] aliases )
-      : base( filePath, key, aliases )
+    public CommandConfig( string key, params string[] aliases )
+      : base( key, aliases )
     {
-      this.Items = new List<T>();
+      this.Ext = new T();
     }
 
-    public List<T> Items { get; set; }
+    public T Ext { get; set; }
 
     protected override dynamic Parse( string json )
     {
-      return JsonConvert.DeserializeObject<TagCommandConfig<T>>( json );
+      return JsonConvert.DeserializeObject<CommandConfig<T>>( json );
     }
     protected override void Assign( dynamic conf )
     {
       base.Assign( conf as BaseCommandConfig );
-      this.Items = conf.Items;
+      this.Ext = conf.Ext;
     }
   }
 
-  public enum RestrictType { None = 0, Allow = 1, Deny = 2, Admin = 3 }
+
+  public class TagConfig
+  {
+    public TagConfig()
+    {
+      this.Tags = new List<Tag>();
+    }
+    public List<Tag> Tags { get; set; }
+  }
 
   public class Tag
   {
