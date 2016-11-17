@@ -34,14 +34,7 @@ namespace NerdyBot.Commands
           this.conf.Write();
         }
         else if ( args[0] == "help" )
-        {
-          StringBuilder sb = new StringBuilder();
-          sb.Append( QuickHelp() );
-          sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
-          sb.AppendLine();
-          sb.AppendLine( "Beispiel: " + client.Config.Prefix + this.conf.Key + " [FRAGE]" );
-          msg.User.SendMessage( "```" + sb.ToString() + "```" );
-        }
+          msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
         else
         {
           int idx = ( new Random() ).Next( 0, this.conf.Ext.Items.Count() );
@@ -59,6 +52,15 @@ namespace NerdyBot.Commands
       sb.AppendLine();
       sb.AppendLine( "Magic 8Ball beantwortet dir jede GESCHLOSSENE Frage, die du an ihn richtest" );
       sb.AppendLine( "Key: " + this.conf.Key );
+      return sb.ToString();
+    }
+    public string FullHelp( char prefix )
+    {
+      StringBuilder sb = new StringBuilder();
+      sb.Append( QuickHelp() );
+      sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
+      sb.AppendLine();
+      sb.AppendLine( "Beispiel: " + prefix + this.conf.Key + " [FRAGE]" );
       return sb.ToString();
     }
     #endregion ICommand

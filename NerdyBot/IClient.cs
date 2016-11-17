@@ -13,7 +13,5 @@ namespace NerdyBot
     void DownloadAudio( string url, string outp );
     void SendAudio( Channel vChannel, string localPath, bool delAfterPlay = false );
     bool StopPlaying { get; set; }
-
-    T GetService<T>() where T : class, IService;
   }
 }

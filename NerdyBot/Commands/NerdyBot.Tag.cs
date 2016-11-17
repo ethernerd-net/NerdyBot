@@ -78,7 +78,7 @@ namespace NerdyBot.Commands
           break;
 
         case "help":
-          WriteHelp( msg.User, client.Config.Prefix );
+          msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
           break;
 
         default:
@@ -101,9 +101,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: " + this.conf.Key );
       return sb.ToString();
     }
-    #endregion ICommand
-
-    private void WriteHelp( User usr, char prefix )
+    public string FullHelp( char prefix )
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );
@@ -140,7 +138,12 @@ namespace NerdyBot.Commands
       sb.AppendLine( ">_>" );
       sb.AppendLine();
       sb.AppendLine();
-      usr.SendMessage( "```" + sb.ToString() + "```" );
+      return sb.ToString();
+    }
+    #endregion ICommand
+
+    private void WriteHelp( User usr, char prefix )
+    {
     }
 
     private string GetTypeString( TagType type )

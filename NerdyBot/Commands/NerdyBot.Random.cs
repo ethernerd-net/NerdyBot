@@ -93,13 +93,7 @@ namespace NerdyBot.Commands
             break;
 
           case "help":
-            StringBuilder sb = new StringBuilder();
-            sb.Append( QuickHelp() );
-            sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
-            sb.AppendLine();
-            sb.AppendLine( client.Config.Prefix + this.conf.Key + " [option]" );
-            sb.AppendLine( "option: cat | penguin | bunny | chuck | joke | yomomma | quote | trump | xkcd | help" );
-            msg.User.SendMessage( "```" + sb.ToString() + "```" );
+            msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
             break;
 
           default:
@@ -118,6 +112,16 @@ namespace NerdyBot.Commands
       sb.AppendLine();
       sb.AppendLine( "Der Random Command gibt, je nach Sub-Parameter, einen zufälligen Output zurück." );
       sb.AppendLine( "Key: " + this.conf.Key );
+      return sb.ToString();
+    }
+    public string FullHelp( char prefix )
+    {
+      StringBuilder sb = new StringBuilder();
+      sb.Append( QuickHelp() );
+      sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
+      sb.AppendLine();
+      sb.AppendLine( prefix + this.conf.Key + " [option]" );
+      sb.AppendLine( "option: cat | penguin | bunny | chuck | joke | yomomma | quote | trump | xkcd | help" );
       return sb.ToString();
     }
     #endregion ICommand

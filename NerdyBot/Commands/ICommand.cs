@@ -10,5 +10,6 @@ namespace NerdyBot.Commands
     void Init();
     Task Execute( MessageEventArgs msg, string[] args, IClient client );
     string QuickHelp();
+    string FullHelp( char prefix );
   }
 }

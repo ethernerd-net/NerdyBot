@@ -31,17 +31,9 @@ namespace NerdyBot.Commands
       return Task.Factory.StartNew( async () =>
       {
         if ( args.Length == 1 && args[0] == "help" )
-        {
-          StringBuilder sb = new StringBuilder();
-          sb.Append( QuickHelp() );
-          sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
-          sb.AppendLine();
-          sb.AppendLine( "Beispiel: " + client.Config.Prefix + this.conf.Key + " [KEYWORDS]" );
-          msg.User.SendMessage( "```" + sb.ToString() + "```" );
-        }
+          msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
         else
         {
-
           var youtubeService = new YouTubeService( new BaseClientService.Initializer()
           {
             ApiKey = "AIzaSyAmrg8abuMO0esvieSZCdduxqog815QRnY",
@@ -70,6 +62,15 @@ namespace NerdyBot.Commands
       sb.AppendLine();
       sb.AppendLine( "Der Youtube Befehlt ermöglicht eine 'Auf gut Glück'-Suche." );
       sb.AppendLine( "Key: " + this.conf.Key );
+      return sb.ToString();
+    }
+    public string FullHelp( char prefix )
+    {
+      StringBuilder sb = new StringBuilder();
+      sb.Append( QuickHelp() );
+      sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
+      sb.AppendLine();
+      sb.AppendLine( "Beispiel: " + prefix + this.conf.Key + " [KEYWORDS]" );
       return sb.ToString();
     }
     #endregion ICommand

@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Net;
 using System.Diagnostics;
 using NAudio.Wave;
+using System.Text;
 
 namespace NerdyBot
 {
@@ -47,10 +48,10 @@ namespace NerdyBot
       {
         x.Mode = AudioMode.Outgoing;
       } );
-      this.audio = GetService<AudioService>();
+      this.audio = client.GetService<AudioService>();
     }
 
-    private string[] preservedKeys = new string[] { "perm", "help", "stop", "leave", "join" };
+    private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "leave", "join" };
 
     private List<ICommand> commands = new List<ICommand>();
     private void InitCommands()
@@ -90,12 +91,14 @@ namespace NerdyBot
           string[] args = e.Message.Text.Substring( 1 ).Split( ' ' );
           string input = args[0].ToLower();
           if ( input == "perm" )
+          {
+            isCommand = true;
             RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
+          }
           else if ( input == "help" )
           {
-            string text = string.Empty;
-            this.commands.ForEach( ( cmd ) => text += cmd.QuickHelp() + Environment.NewLine + Environment.NewLine );
-            WriteUser( text, e.User );
+            isCommand = true;
+            ShowHelp( e, args.Skip( 1 ).ToArray() );
           }
           else if ( input == "stop" )
             this.StopPlaying = true;
@@ -157,6 +160,7 @@ namespace NerdyBot
       return true;
     }
 
+    #region MainCOmmands
     private void RestrictCommandByRole( MessageEventArgs e, string[] args )
     {
       if ( e.User.ServerPermissions.Administrator )
@@ -230,6 +234,29 @@ namespace NerdyBot
         WriteInfo( "Du bist zu unwichtig dafür!" );
       }
     }
+    private void ShowHelp( MessageEventArgs e, IEnumerable<string> args )
+    {
+      StringBuilder sb = new StringBuilder();
+      if ( args.Count() == 0 )
+      {
+        this.commands.ForEach( ( cmd ) =>
+        {
+          sb.AppendLine( cmd.QuickHelp() );
+          sb.AppendLine();
+          sb.AppendLine();
+        } );
+      }
+      else
+      {
+        var command = this.commands.FirstOrDefault( cmd => cmd.Config.Key == args.First() || cmd.Config.Aliases.Any( ali => ali == args.First() ) );
+        if ( commands != null )
+          sb = new StringBuilder( command.FullHelp( this.conf.Prefix ) );
+        else
+          sb = new StringBuilder( "Du kennst anscheinend mehr Commands als ich!" );
+      }
+      WriteUser( sb.ToString(), e.User );
+    }
+    #endregion MainCommands
 
     private void LogHandler( object sender, LogMessageEventArgs e )
     {
@@ -335,11 +362,6 @@ namespace NerdyBot
         if ( delAfterPlay )
           File.Delete( localPath );
       }
-    }
-
-    public T GetService<T>() where T : class, IService
-    {
-      return client.GetService<T>();
     }
 
     public async void WriteUser( string text, User usr )

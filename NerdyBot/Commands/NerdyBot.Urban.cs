@@ -31,15 +31,7 @@ namespace NerdyBot.Commands
       return Task.Factory.StartNew( () =>
       {
         if ( args.Length == 1 && args[0] == "help" )
-        {
-          StringBuilder sb = new StringBuilder();
-          sb.Append( QuickHelp() );
-          sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
-          sb.AppendLine();
-          sb.AppendLine( "Beispiel: " + client.Config.Prefix + this.conf.Key + " <sound> [KEYWORD]" );
-          sb.AppendLine( "Bei mitangabe des optionalen Parameters 'sound' wird auf urban dictionary nach einem entsprechenden soundfile gesucht!" );
-          msg.User.SendMessage( "```" + sb.ToString() + "```" );
-        }
+          msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
         else if ( args.Length > 1 && args[0] == "sound" )
         {
           string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", args.Skip( 1 ) ) );
@@ -80,6 +72,16 @@ namespace NerdyBot.Commands
       sb.AppendLine();
       sb.AppendLine( "Sucht auf Urban Dictonary nach dem eingegebenen Keyword." );
       sb.AppendLine( "Key: " + this.conf.Key );
+      return sb.ToString();
+    }
+    public string FullHelp( char prefix )
+    {
+      StringBuilder sb = new StringBuilder();
+      sb.Append( QuickHelp() );
+      sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
+      sb.AppendLine();
+      sb.AppendLine( "Beispiel: " + prefix + this.conf.Key + " <sound> [KEYWORD]" );
+      sb.AppendLine( "Bei mitangabe des optionalen Parameters 'sound' wird auf urban dictionary nach einem entsprechenden soundfile gesucht!" );
       return sb.ToString();
     }
     #endregion ICommand
