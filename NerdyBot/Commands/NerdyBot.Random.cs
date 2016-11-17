@@ -73,8 +73,23 @@ namespace NerdyBot.Commands
           case "quote":
             string quoteJson = ( new WebClient() ).DownloadString( "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand" );
             var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
-            string text = EntityToUnicode( quote.content ).Replace( "<p>", " " ).Replace( "</p>", " " );
+            string text = StripHTML( EntityToUnicode( quote.content ) );
             client.WriteBlock( text + Environment.NewLine + Environment.NewLine + "-" + quote.title, "", msg.Channel );
+            break;
+
+          case "trump":
+            string trumpJson = ( new WebClient() ).DownloadString( "https://api.whatdoestrumpthink.com/api/v1/quotes/random" );
+            var trump = JsonConvert.DeserializeObject<TrumpQuote>( trumpJson );
+            client.Write( "Trump : " + trump.message, msg.Channel );
+            break;
+
+          case "xkcd":
+            string xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/info.0.json" );
+            var xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
+
+            xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/" + ( new Random() ).Next( xkcd.num ) + "/info.0.json" );
+            xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
+            client.Write( xkcd.img.Replace( "\\", "" ), msg.Channel );
             break;
 
           case "help":
@@ -83,7 +98,7 @@ namespace NerdyBot.Commands
             sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
             sb.AppendLine();
             sb.AppendLine( client.Config.Prefix + this.conf.Key + " [option]" );
-            sb.AppendLine( "option: cat | penguin | bunny | chuck | joke | yomomma | quote | help" );
+            sb.AppendLine( "option: cat | penguin | bunny | chuck | joke | yomomma | quote | trump | xkcd | help" );
             msg.User.SendMessage( "```" + sb.ToString() + "```" );
             break;
 
@@ -128,6 +143,10 @@ namespace NerdyBot.Commands
       }
       return html;
     }
+    public string StripHTML( string input )
+    {
+      return Regex.Replace( input, "<.*?>", String.Empty );
+    }
 
     #region jsonClasses
     class RandomCat
@@ -160,6 +179,16 @@ namespace NerdyBot.Commands
       public string content { get; set; }
       public string link { get; set; }
     }
+    class TrumpQuote
+    {
+      public string message { get; set; }
+    }
+    class RandomXKCD
+    {
+      public int num { get; set; }
+      public string img { get; set; }
+    }
+
     #endregion
   }
 }
