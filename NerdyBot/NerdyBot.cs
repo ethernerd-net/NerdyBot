@@ -82,9 +82,10 @@ namespace NerdyBot
         if ( e.Server != null )
         {
           string[] args = e.Message.Text.Substring( 1 ).Split( ' ' );
-          if ( args[0] == "perm" )
+          string input = args[0].ToLower();
+          if ( input == "perm" )
             RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
-          else if ( args[0] == "help" )
+          else if ( input == "help" )
           {
             string text = string.Empty;
             this.commands.ForEach( ( cmd ) => text += cmd.QuickHelp() + Environment.NewLine + Environment.NewLine );
@@ -94,7 +95,7 @@ namespace NerdyBot
           {
             foreach ( var cmd in this.commands )
             {
-              if ( args[0] == cmd.Config.Key || cmd.Config.Aliases.Any( a => args[0] == a ) )
+              if ( input == cmd.Config.Key || cmd.Config.Aliases.Any( a => input == a ) )
               {
                 isCommand = true;
                 if ( CanExecute( e.User, cmd ) )

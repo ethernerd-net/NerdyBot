@@ -139,6 +139,7 @@
     <Compile Include="Commands\NerdyBot.8Ball.cs" />
     <Compile Include="Commands\NerdyBot.BaseCommandConfig.cs" />
     <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="Commands\NerdyBot.CommandConfigTemplate.cs" />
     <Compile Include="Commands\NerdyBot.Random.cs" />
     <Compile Include="Commands\NerdyBot.Youtube.cs" />
     <Compile Include="NerdyBot.BaseConfig.cs" />

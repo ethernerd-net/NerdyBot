@@ -101,7 +101,7 @@ namespace NerdyBot.Commands
       StringBuilder sb = new StringBuilder();
       sb.AppendLine( "======== RANDOM ========" );
       sb.AppendLine();
-      sb.AppendLine( "Der Random Command (random|rand|rnd) gibt, je nach Sub-Parameter, einen zufälligen Output zurück." );
+      sb.AppendLine( "Der Random Command gibt, je nach Sub-Parameter, einen zufälligen Output zurück." );
       return sb.ToString();
     }
     #endregion ICommand

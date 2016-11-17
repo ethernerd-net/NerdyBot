@@ -1,6 +1,5 @@
 ﻿using Discord;
 using NerdyBot.Commands.Config;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace NerdyBot.Commands
