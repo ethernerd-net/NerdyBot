@@ -1,13 +1,9 @@
 ﻿using Discord;
-using Discord.Audio;
-using NAudio.Wave;
 using NerdyBot.Commands.Config;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,14 +15,11 @@ namespace NerdyBot.Commands
     private const string DEFAULTKEY = "tag";
     private static readonly string[] DEFAULTALIASES = new string[] { "t" };
 
-    private bool stop = false;
-    private object playing = new object();
-
     private IEnumerable<string> KeyWords
     {
       get
       {
-        return new string[] { "create", "delete", "edit", "list", "raw", "info", "help", "stop" };
+        return new string[] { "create", "delete", "edit", "list", "raw", "info", "help" };
       }
     }
 
@@ -84,10 +77,6 @@ namespace NerdyBot.Commands
           List( msg, client );
           break;
 
-        case "stop":
-          stop = true;
-          break;
-
         case "help":
           WriteHelp( msg.User, client.Config.Prefix );
           break;
@@ -95,7 +84,7 @@ namespace NerdyBot.Commands
         default:
           if ( args.Count() == 1 )
           {
-            stop = false;
+            client.StopPlaying = false;
             Send( msg, args, client );
           }
           else
@@ -378,7 +367,12 @@ namespace NerdyBot.Commands
           break;
         case TagType.Sound:
           if ( msg.User.VoiceChannel != null )
-            SendAudio( client.GetService<AudioService>(), msg.User.VoiceChannel, tag, idx, client );
+          {
+            string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
+            if ( !File.Exists( path ) )
+              client.DownloadAudio( tag.Entries[idx], path );
+            client.SendAudio( msg.User.VoiceChannel, path );
+          }
           else
             client.WriteInfo( "In einen Voicechannel du musst!", msg.Channel );
           break;
@@ -413,7 +407,7 @@ namespace NerdyBot.Commands
 
       for ( int i = 0; i < args.Count(); i++ )
       {
-        DownloadAudio( args[i], Path.Combine( path, ( listCount + i ) + ".mp3" ), client );
+        client.DownloadAudio( args[i], Path.Combine( path, ( listCount + i ) + ".mp3" ) );
         tag.Entries.Add( args[i] );
       }
     }
@@ -457,7 +451,7 @@ namespace NerdyBot.Commands
       return remCount;
     }
 
-    private void DownloadAudio( string url, string outp, IClient client )
+    /*private void DownloadAudio( string url, string outp, IClient client )
     {
       try
       {
@@ -503,9 +497,9 @@ namespace NerdyBot.Commands
       {
         throw new ArgumentException( ex.Message );
       }
-    }
+    }*/
 
-    private async void SendAudio( AudioService audio, Channel vChannel, Tag tag, int idx, IClient client )
+    /*private async void SendAudio( AudioService audio, Channel vChannel, Tag tag, int idx, IClient client )
     {
       string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
       if ( !File.Exists( path ) )
@@ -542,6 +536,6 @@ namespace NerdyBot.Commands
         vClient.Wait();
         stop = false;
       }
-    }
+    }*/
   }
 }
