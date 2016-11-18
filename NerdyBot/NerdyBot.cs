@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.Audio;
 using Discord.Commands;
-using NerdyBot.Commands;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -11,6 +10,7 @@ using System.Net;
 using System.Diagnostics;
 using NAudio.Wave;
 using System.Text;
+using NerdyBot.Contracts;
 
 namespace NerdyBot
 {
@@ -65,7 +65,7 @@ namespace NerdyBot
           if ( type.GetInterface( "ICommand" ) != null )
           {
             ICommand command = ( ICommand )Activator.CreateInstance( type, null, null );
-            command.Init();
+            command.Init( this );
             if ( !CanLoadCommand( command ) )
               throw new InvalidOperationException( "Duplicated command key or alias: " + command.Config.Key );
             this.commands.Add( command );
@@ -110,13 +110,32 @@ namespace NerdyBot
               {
                 isCommand = true;
                 if ( CanExecute( e.User, cmd ) )
-                  cmd.Execute( e, args.Skip( 1 ).ToArray(), this );
+                  cmd.Execute( new CommandMessage()
+                  {
+                    Arguments = args.Skip( 1 ).ToArray(),
+                    Text = e.Message.Text,
+                    Channel = new CommandChannel()
+                    {
+                      Id = e.Channel.Id,
+                      Mention = e.Channel.Mention,
+                      Name = e.Channel.Name
+                    },
+                    User = new CommandUser()
+                    {
+                      Id = e.User.Id,
+                      Name = e.User.Name,
+                      FullName = e.User.ToString(),
+                      Mention = e.User.Mention,
+                      VoiceChannelId = e.User.VoiceChannel == null ? 0 : e.User.VoiceChannel.Id,
+                      Permissions = e.User.ServerPermissions
+                    }
+                  } );
               }
             }
           }
         }
         else
-          Write( "Ich habe dir hier nichts zu sagen!", e.Channel );
+          e.Channel.SendMessage( "Ich habe dir hier nichts zu sagen!" );
       }
 
       if ( isCommand )
@@ -160,42 +179,44 @@ namespace NerdyBot
       return true;
     }
 
-    #region MainCOmmands
+    #region MainCommands
     private void RestrictCommandByRole( MessageEventArgs e, string[] args )
     {
+      string info = string.Empty;
       if ( e.User.ServerPermissions.Administrator )
       {
-        switch ( args[0].ToLower() )
+        string option = args.First().ToLower();
+        switch ( option )
         {
         case "add":
         case "rem":
           if ( args.Count() != 3 )
-            WriteInfo( "Äh? Ich glaube die Parameteranzahl stimmt so nicht!" );
+            info = "Äh? Ich glaube die Parameteranzahl stimmt so nicht!";
           else
           {
             var role = e.Server.Roles.FirstOrDefault( r => r.Name == args[1] );
             var cmd = this.commands.FirstOrDefault( c => c.Config.Key == args[2] );
             if ( cmd == null )
-              WriteInfo( "Command nicht gefunden!" );
+              info = "Command nicht gefunden!";
             else
             {
               if ( cmd.Config.RestrictedRoles.Contains( role.Id ) )
               {
-                if ( args[0] == "rem" )
+                if ( option == "rem" )
                   cmd.Config.RestrictedRoles.Remove( role.Id );
               }
               else
               {
-                if ( args[0] == "add" )
+                if ( option == "add" )
                   cmd.Config.RestrictedRoles.Add( role.Id );
               }
-              WriteInfo( "Permissions updated for " + cmd.Config.Key, e.Channel );
+              info = "Permissions updated for " + cmd.Config.Key;
             }
           }
           break;
         case "type":
           if ( args.Count() != 3 )
-            WriteInfo( "Äh? Ich glaube die Parameteranzahl stimmt so nicht!" );
+            info = "Äh? Ich glaube die Parameteranzahl stimmt so nicht!";
           else
           {
             var cmd = this.commands.FirstOrDefault( c => c.Config.Key == args[2] );
@@ -214,25 +235,23 @@ namespace NerdyBot
               cmd.Config.RestrictionType = Commands.Config.RestrictType.Allow;
               break;
             default:
-              WriteInfo( args[1] + " ist ein invalider Parameter", e.Channel );
+              SendMessage( args[1] + " ist ein invalider Parameter", new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = e.Channel.Id, MessageType = MessageType.Info } );
               return;
             }
-            WriteInfo( "Permissions updated for " + cmd.Config.Key, e.Channel );
+            info = "Permissions updated for " + cmd.Config.Key;
           }
           break;
         case "help":
           //TODO HELP
           break;
         default:
-          WriteInfo( "Invalider Parameter!" );
+          info = "Invalider Parameter!";
           break;
         }
-
       }
       else
-      {
-        WriteInfo( "Du bist zu unwichtig dafür!" );
-      }
+        info = "Du bist zu unwichtig dafür!";
+      SendMessage( info, new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = e.Channel.Id, MessageType = MessageType.Info } );
     }
     private void ShowHelp( MessageEventArgs e, IEnumerable<string> args )
     {
@@ -254,7 +273,7 @@ namespace NerdyBot
         else
           sb = new StringBuilder( "Du kennst anscheinend mehr Commands als ich!" );
       }
-      WriteUser( sb.ToString(), e.User );
+      SendMessage( sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = e.User.Id, Split = true, MessageType = MessageType.Block } );
     }
     #endregion MainCommands
 
@@ -327,8 +346,9 @@ namespace NerdyBot
         throw new ArgumentException( ex.Message );
       }
     }
-    public async void SendAudio( Channel vChannel, string localPath, bool delAfterPlay = false )
+    public async void SendAudio( ulong channelId, string localPath, bool delAfterPlay = false )
     {
+      Channel vChannel = this.client.Servers.First().VoiceChannels.FirstOrDefault( vc => vc.Id == channelId );
       lock ( playing )
       {
         IAudioClient vClient = audio.Join( vChannel ).Result;
@@ -364,33 +384,78 @@ namespace NerdyBot
       }
     }
 
-    public async void WriteUser( string text, User usr )
+    public async void SendMessage( string message, SendMessageOptions options )
     {
-      foreach ( string message in ChunkMessage( text ) )
-        usr.SendMessage( "```" + text + "```" );
-    }
-    public async void Write( string info, Channel ch = null )
-    {
-      ch = ch ?? stdOutChannel;
-      ch.SendMessage( info );
-    }
-    public async void WriteInfo( string info, Channel ch = null )
-    {
-      ch = ch ?? stdOutChannel;
-      ch.SendMessage( "`" + info + "`" );
-    }
-    public async void WriteBlock( string info, string highlight = "", Channel ch = null )
-    {
-      ch = ch ?? stdOutChannel;
-      if ( info.Length + highlight.Length + 6 > 2000 )
+      switch ( options.TargetType )
       {
-        File.WriteAllText( "raw.txt", info );
-        await ch.SendFile( "raw.txt" );
-        File.Delete( "raw.txt" );
+      case TargetType.User:
+        User usr = this.client.Servers.First().GetUser( options.TargetId );
+        if ( !options.Split && message.Length > 1990 )
+        {
+          File.WriteAllText( "raw.txt", message );
+          await usr.SendFile( "raw.txt" );
+          File.Delete( "raw.txt" );
+        }
+        else
+        {
+          foreach ( string msg in ChunkMessage( message ) )
+            usr.SendMessage( FormatMessage( msg, options.MessageType, options.Hightlight ) );
+        }
+        break;
+      case TargetType.Channel:
+        {
+          Channel ch = this.client.Servers.First().GetChannel( options.TargetId );
+          if ( !options.Split && message.Length > 1990 )
+          {
+            File.WriteAllText( "raw.txt", message );
+            await ch.SendFile( "raw.txt" );
+            File.Delete( "raw.txt" );
+          }
+          else
+          {
+            foreach ( string msg in ChunkMessage( message ) )
+              ch.SendMessage( FormatMessage( msg, options.MessageType, options.Hightlight ) );
+          }
+        }
+        break;
+      case TargetType.Default:
+      default:
+        {
+          Channel ch = this.client.GetChannel( conf.ResponseChannel );
+          if ( !options.Split && message.Length > 1990 )
+          {
+            File.WriteAllText( "raw.txt", message );
+            await ch.SendFile( "raw.txt" );
+            File.Delete( "raw.txt" );
+          }
+          else
+          {
+            foreach ( string msg in ChunkMessage( message ) )
+              ch.SendMessage( FormatMessage( msg, options.MessageType, options.Hightlight ) );
+          }
+        }
+        break;
       }
-      else
-        ch.SendMessage( "```" + highlight + Environment.NewLine + info + "```" );
     }
+    private string FormatMessage( string message, MessageType format, string highlight )
+    {
+      string formatedMessage = string.Empty;
+      switch ( format )
+      {
+      case MessageType.Block:
+        formatedMessage = "```" + highlight + Environment.NewLine + message + "```";
+        break;
+      case MessageType.Info:
+        formatedMessage = "`" + message + "`";
+        break;
+      case MessageType.Normal:
+      default:
+        formatedMessage = message;
+        break;
+      }
+      return formatedMessage;
+    }
+
     public void Log( string text )
     {
       this.client.Log.Log( LogSeverity.Info, "", text );

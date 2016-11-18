@@ -136,17 +136,20 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Contracts\ICommandMessage.cs" />
+    <Compile Include="Contracts\ICommandConfig.cs" />
     <Compile Include="Commands\NerdyBot.8Ball.Config.cs" />
     <Compile Include="Commands\NerdyBot.8Ball.cs" />
     <Compile Include="Commands\NerdyBot.BaseCommandConfig.cs" />
-    <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="Contracts\ICommand.cs" />
     <Compile Include="Commands\NerdyBot.CommandConfigTemplate.cs" />
     <Compile Include="Commands\NerdyBot.Imgur.cs" />
     <Compile Include="Commands\NerdyBot.Random.cs" />
     <Compile Include="Commands\NerdyBot.Urban.cs" />
     <Compile Include="Commands\NerdyBot.Youtube.cs" />
     <Compile Include="NerdyBot.BaseConfig.cs" />
-    <Compile Include="IClient.cs" />
+    <Compile Include="Contracts\IClient.cs" />
+    <Compile Include="NerdyBot.CommandMessage.cs" />
     <Compile Include="NerdyBot.cs" />
     <Compile Include="NerdyBot.MainConfig.cs" />
     <Compile Include="Program.cs" />

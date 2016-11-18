@@ -1,5 +1,5 @@
-﻿using Discord;
-using NerdyBot.Commands.Config;
+﻿using NerdyBot.Commands.Config;
+using NerdyBot.Contracts;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
@@ -12,55 +12,68 @@ namespace NerdyBot.Commands
 {
   class UrbanCommand : ICommand
   {
-    private const string DEFAULTKEY = "urban";
-    private static readonly string[] DEFAULTALIASES = new string[] {  };
-
     private BaseCommandConfig conf;
+    private const string DEFAULTKEY = "urban";
+    private static readonly string[] DEFAULTALIASES = new string[] { "u" };
+
+    private IClient client;
 
     #region ICommand
-    public BaseCommandConfig Config { get { return this.conf; } }
+    public ICommandConfig Config { get { return this.conf; } }
 
-    public void Init()
+    public void Init( IClient client )
     {
       this.conf = new BaseCommandConfig( DEFAULTKEY, DEFAULTALIASES );
       this.conf.Read();
+      this.client = client;
     }
 
-    public Task Execute( MessageEventArgs msg, string[] args, IClient client )
+    public Task Execute( ICommandMessage msg )
     {
       return Task.Factory.StartNew( () =>
       {
-        if ( args.Length == 1 && args[0] == "help" )
-          msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
-        else if ( args.Length > 1 && args[0] == "sound" )
+        if ( msg.Arguments.Length == 1 && msg.Arguments[0] == "help" )
+          this.client.SendMessage( FullHelp( client.Config.Prefix ),
+            new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
+        else if ( msg.Arguments.Length > 1 && msg.Arguments[0] == "sound" )
         {
-          string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", args.Skip( 1 ) ) );
-          var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
-          if ( urban.sounds != null && urban.sounds.Count() > 0 )
+          if ( msg.User.VoiceChannelId != 0 )
           {
-            string soundUrl = urban.sounds.First();
-            if ( soundUrl.EndsWith( ".mp3" ) )
+            string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", msg.Arguments.Skip( 1 ) ) );
+            var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
+            if ( urban.sounds != null && urban.sounds.Count() > 0 )
             {
-              client.StopPlaying = false;
-              string path = Path.Combine( msg.Server.Name, string.Join( " ", args.Skip( 1 ) ) + ".mp3" );
-              if ( !File.Exists( path ) )
-                client.DownloadAudio( urban.sounds.First(), path );
-              client.SendAudio( msg.User.VoiceChannel, path );
+              string soundUrl = urban.sounds.First();
+              if ( soundUrl.EndsWith( ".mp3" ) )
+              {
+                client.StopPlaying = false;
+                string path = Path.Combine( "urban", string.Join( " ", msg.Arguments.Skip( 1 ) ) + ".mp3" );
+                if ( !File.Exists( path ) )
+                  client.DownloadAudio( urban.sounds.First(), path );
+                client.SendAudio( msg.User.VoiceChannelId, path );
+              }
+              else
+                this.client.SendMessage( "404, Urban not found!",
+                  new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
             }
             else
-              client.WriteInfo( "404, Urban not found!", msg.Channel );
+              this.client.SendMessage( "404, Urban not found!",
+                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
           }
           else
-            client.WriteInfo( "404, Urban not found!", msg.Channel );
+            this.client.SendMessage( "In einen Voicechannel du musst!",
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
         }
         else
         {
-          string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", args ) );
+          string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", msg.Arguments ) );
           var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
           if ( urban.list != null && urban.list.Count() > 0 )
-            client.Write( urban.list.First().permalink.Replace( "\\", "" ), msg.Channel );
+            this.client.SendMessage( urban.list.First().permalink.Replace( "\\", "" ),
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
           else
-            client.WriteInfo( "404, Urban not found!", msg.Channel );
+            this.client.SendMessage( "404, Urban not found!",
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
         }
       } );
     }
@@ -85,15 +98,18 @@ namespace NerdyBot.Commands
       return sb.ToString();
     }
     #endregion ICommand
-  }
-  public class UrbanJson
-  {
-    public List<UrbanEntry> list { get; set; }
-    public List<string> sounds { get; set; }
-  }
-  public class UrbanEntry
-  {
-    public string permalink { get; set; }
-    public string definition { get; set; }
+
+    #region jsonClasses
+    private class UrbanJson
+    {
+      public List<UrbanEntry> list { get; set; }
+      public List<string> sounds { get; set; }
+    }
+    private class UrbanEntry
+    {
+      public string permalink { get; set; }
+      public string definition { get; set; }
+    }
+    #endregion jsonClasses
   }
 }

@@ -4,43 +4,49 @@ using System.Threading.Tasks;
 using Discord;
 using NerdyBot.Commands.Config;
 using System.Text;
+using System.Collections.Generic;
+using NerdyBot.Contracts;
 
 namespace NerdyBot.Commands
 {
   class Ball8 : ICommand
   {
-    private const string DEFAULTKEY = "8ball";
-    private static readonly string[] DEFAULTALIASES = new string[] { "8b" };
-
     private CommandConfig<Ball8Config> conf;
+    private const string DEFAULTKEY = "8ball";
+    private static readonly IEnumerable<string> DEFAULTALIASES = new string[] { "8b" };
+
+    private IClient client;
 
     #region ICommand
-    public BaseCommandConfig Config { get { return this.conf; } }
+    public ICommandConfig Config { get { return this.conf; } }
 
-    public void Init()
+    public void Init( IClient client )
     {
-      this.conf = new CommandConfig<Ball8Config>( DEFAULTKEY, DEFAULTALIASES );
+      this.conf = new CommandConfig<Ball8Config>( DEFAULTKEY, DEFAULTALIASES.ToArray() );
       this.conf.Read();
+      this.client = client;
     }
 
-    public Task Execute( MessageEventArgs msg, string[] args, IClient client )
+    public Task Execute( ICommandMessage msg )
     {
       return Task.Factory.StartNew( () =>
       {
-        if ( args[0] == "add" && msg.User.ServerPermissions.Administrator )
+        if ( msg.Arguments[0] == "add" && msg.User.Permissions.Administrator )
         {
-          string answer = string.Join( " ", args.Skip( 1 ) );
+          string answer = string.Join( " ", msg.Arguments.Skip( 1 ) );
           this.conf.Ext.Items.Add( answer );
           this.conf.Write();
         }
-        else if ( args[0] == "help" )
-          msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
+        else if ( msg.Arguments[0] == "help" )
+          this.client.SendMessage( FullHelp( client.Config.Prefix ), 
+            new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
         else
         {
           int idx = ( new Random() ).Next( 0, this.conf.Ext.Items.Count() );
-          client.Write( msg.User.Mention + " asked: '" + string.Join( " ", args ) +
+          this.client.SendMessage( msg.User.Mention + " asked: '" + string.Join( " ", msg.Arguments ) +
             Environment.NewLine + Environment.NewLine +
-            "My answer is: " + this.conf.Ext.Items[idx], msg.Channel );
+            "My answer is: " + this.conf.Ext.Items[idx],
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
         }
       } );
     }

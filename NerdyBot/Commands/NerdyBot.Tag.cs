@@ -1,5 +1,6 @@
 ﻿using Discord;
 using NerdyBot.Commands.Config;
+using NerdyBot.Contracts;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +14,9 @@ namespace NerdyBot.Commands
   {
     private CommandConfig<TagConfig> conf;
     private const string DEFAULTKEY = "tag";
-    private static readonly string[] DEFAULTALIASES = new string[] { "t" };
+    private static readonly IEnumerable<string> DEFAULTALIASES = new string[] { "t" };
+
+    private IClient client;
 
     private IEnumerable<string> KeyWords
     {
@@ -24,70 +27,68 @@ namespace NerdyBot.Commands
     }
 
     #region ICommand
-    public BaseCommandConfig Config { get { return this.conf; } }
+    public ICommandConfig Config { get { return this.conf; } }
 
-    public void Init()
+    public void Init( IClient client)
     {
       this.conf = new CommandConfig<TagConfig>( DEFAULTKEY, DEFAULTALIASES );
       this.conf.Read();
+      this.client = client;
     }
 
-    public Task Execute( MessageEventArgs msg, string[] args, IClient client )
+    public Task Execute( ICommandMessage msg )
     {
       return Task.Factory.StartNew( () =>
       {
-        switch ( args[0].ToLower() )
+        string response = "Invalid parameter count, check help for... guess what?";
+        var subArgs = msg.Arguments.Skip( 1 ).ToArray();
+
+        switch ( msg.Arguments[0].ToLower() )
         {
         case "create":
-          if ( args.Count() >= 4 )
-            Create( msg, args, client );
-          else
-            client.WriteInfo( "Invalid parameter count, check help for... guess what?", msg.Channel );
+          if ( msg.Arguments.Count() >= 4 )
+            response = Create( subArgs, msg.User.FullName );
           break;
 
         case "delete":
-          if ( args.Count() == 2 )
-            Delete( msg, args, client );
-          else
-            client.WriteInfo( "Invalid parameter count, check help for... guess what?", msg.Channel );
+          if ( msg.Arguments.Count() == 2 )
+            response = Delete( subArgs.First() );
           break;
 
         case "edit":
-          if ( args.Count() >= 4 )
-            Edit( msg, args, client );
-          else
-            client.WriteInfo( "Invalid parameter count, check help for... guess what?", msg.Channel );
+          if ( msg.Arguments.Count() >= 4 )
+            response = Edit( subArgs, msg.User.FullName, msg.User.Permissions );
           break;
 
         case "info":
-          if ( args.Count() >= 2 )
-            Info( msg, args, client );
-          else
-            client.WriteInfo( "Invalid parameter count, check help for... guess what?", msg.Channel );
+          if ( msg.Arguments.Count() >= 2 )
+            response = Info( subArgs.First(), msg.Channel );
           break;
 
         case "raw":
-          if ( args.Count() >= 2 )
-            Raw( msg, args, client );
-          else
-            client.WriteInfo( "Invalid parameter count, check help for... guess what?", msg.Channel );
+          if ( msg.Arguments.Count() >= 2 )
+            response = Raw( subArgs.First(), msg.Channel );
           break;
 
         case "list":
-          List( msg, client );
+          List( msg.Channel );
+          response = string.Empty;
           break;
 
         case "help":
-          msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
+          this.client.SendMessage( FullHelp( client.Config.Prefix ),
+            new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
           break;
 
         default:
-          if ( args.Count() == 1 )
-            Send( msg, args, client );
-          else
-            client.WriteInfo( "Invalid parameter count, check help for... guess what?", msg.Channel );
+          if ( msg.Arguments.Count() == 1 )
+            response = Send( msg.Arguments.First(), msg );
           break;
         }
+        if ( response != string.Empty )
+          this.client.SendMessage( response,
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
+
       }, TaskCreationOptions.None );
     }
 
@@ -142,70 +143,52 @@ namespace NerdyBot.Commands
     }
     #endregion ICommand
 
-    private void WriteHelp( User usr, char prefix )
+    private string Create( string[] args, string author  )
     {
-    }
-
-    private string GetTypeString( TagType type )
-    {
-      switch ( type )
-      {
-      case TagType.Text:
-        return "T";
-      case TagType.Sound:
-        return "S";
-      case TagType.Url:
-        return "U";
-      default:
-        throw new ArgumentException( "WTF??!" );
-      }
-    }
-
-    private async void Create( MessageEventArgs msg, string[] args, IClient client )
-    {
-      if ( !IsValidName( args[1].ToLower() ) )
-        client.WriteInfo( "Tag '" + args[1] + "' existiert bereits oder ist reserviert!!", msg.Channel );
+      string response = string.Empty;
+      if ( !IsValidName( args[0].ToLower() ) )
+        response = "Tag '" + args[0] + "' existiert bereits oder ist reserviert!!";
       else
       {
         Tag tag = new Tag();
-        tag.Name = args[1].ToLower();
-        tag.Author = msg.User.ToString();
+        tag.Name = args[0].ToLower();
+        tag.Author = author;
         tag.CreateDate = DateTime.Now;
         tag.Count = 0;
         tag.Volume = 100;
         tag.Entries = new List<string>();
 
-        switch ( args[2].ToLower() )
+        switch ( args[1].ToLower() )
         {
         case "text":
           tag.Type = TagType.Text;
-          AddTextToTag( tag, args.Skip( 3 ).ToArray() );
+          AddTextToTag( tag, args.Skip( 2 ).ToArray() );
           break;
 
         case "sound":
           tag.Type = TagType.Sound;
-          AddSoundToTag( tag, args.Skip( 3 ).ToArray(), client );
+          AddSoundToTag( tag, args.Skip( 2 ).ToArray() );
           break;
 
         case "url":
           tag.Type = TagType.Url;
-          AddUrlToTag( tag, args.Skip( 3 ).ToArray() );
+          AddUrlToTag( tag, args.Skip( 2 ).ToArray() );
           break;
         default:
-          client.WriteInfo( args[2] + " ist ein invalider Parameter", msg.Channel );
-          return;
+          return args[1] + " ist ein invalider Parameter";
         }
         this.conf.Ext.Tags.Add( tag );
         this.conf.Write();
-        client.WriteInfo( "Tag '" + tag.Name + "' erstellt!", msg.Channel );
+        response = "Tag '" + tag.Name + "' erstellt!";
       }
+      return response;
     }
-
-    private async void Delete( MessageEventArgs msg, string[] args, IClient client )
+    private string Delete( string tagName )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      string reponse = string.Empty;
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
-        client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
+        reponse = "Tag '" + tagName + "' existiert nicht!";
       else
       {
         if ( tag.Type == TagType.Sound )
@@ -213,22 +196,23 @@ namespace NerdyBot.Commands
 
         this.conf.Ext.Tags.Remove( tag );
         this.conf.Write();
-        client.WriteInfo( "Tag '" + tag.Name + "' delete!", msg.Channel );
+        reponse = "Tag '" + tag.Name + "' delete!";
       }
+      return reponse;
     }
-
-    private async void Edit( MessageEventArgs msg, string[] args, IClient client )
+    private string Edit( string[] args, string author, ServerPermissions permissions )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      string response = string.Empty;
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[0].ToLower() );
       if ( tag == null )
-        client.WriteInfo( "Tag '" + args[1] + "' existiert nicht!", msg.Channel );
+        response =  "Tag '" + args[0] + "' existiert nicht!";
       else
       {
-        if ( tag.Author == msg.User.ToString() || msg.User.ServerPermissions.Administrator )
+        if ( tag.Author == author || permissions.Administrator )
         {
-          string[] entries = args.Skip( 3 ).ToArray();
+          string[] entries = args.Skip( 2 ).ToArray();
 
-          switch ( args[2] )
+          switch ( args[1] )
           {
           case "add":
             switch ( tag.Type )
@@ -237,7 +221,7 @@ namespace NerdyBot.Commands
               AddTextToTag( tag, entries );
               break;
             case TagType.Sound:
-              AddSoundToTag( tag, entries, client );
+              AddSoundToTag( tag, entries );
               break;
             case TagType.Url:
               AddUrlToTag( tag, entries );
@@ -245,11 +229,11 @@ namespace NerdyBot.Commands
             default:
               throw new ArgumentException( "WTF?!?!" );
             }
-            client.WriteInfo( entries.Count() + " Einträge zu '" + tag.Name + " hinzugefügt'!", msg.Channel );
+            response = entries.Count() + " Einträge zu '" + tag.Name + " hinzugefügt'!";
             break;
           case "remove":
             int remCount = RemoveTagEntry( tag, entries );
-            client.WriteInfo( remCount + " / " + entries.Count() + " removed", msg.Channel );
+            response = remCount + " / " + entries.Count() + " removed";
             break;
           case "rename":
             if ( !IsValidName( entries[0].ToLower() ) )
@@ -260,25 +244,24 @@ namespace NerdyBot.Commands
                 Directory.Move( Path.Combine( dirName, tag.Name ), Path.Combine( dirName, entries[0] ) );
               }
               tag.Name = entries[0];
-              client.WriteInfo( "Tag umbenannt in '" + tag.Name + "'!", msg.Channel );
+              response = "Tag umbenannt in '" + tag.Name + "'!";
             }
             else
-              client.WriteInfo( "Tag '" + args[1] + "' existiert bereits oder ist reserviert!!", msg.Channel );
+              response = "Tag '" + args[1] + "' existiert bereits oder ist reserviert!!";
             break;
           case "volume":
             break;
           default:
-            client.WriteInfo( "Die Option Name '" + args[2] + "' ist nicht valide!", msg.Channel );
-            return;
+            return "Die Option Name '" + args[2] + "' ist nicht valide!";
           }
           this.conf.Write();
         }
         else
-          client.WriteInfo( "Du bist zu unwichtig dafür!", msg.Channel );
+          response = "Du bist zu unwichtig dafür!";
       }
+      return response;
     }
-
-    private async void List( MessageEventArgs msg, IClient client )
+    private async void List( ICommandChannel channel )
     {
       var tagsInOrder = this.conf.Ext.Tags.OrderBy( x => x.Name );
       StringBuilder sb = new StringBuilder( "" );
@@ -296,19 +279,20 @@ namespace NerdyBot.Commands
             sb.AppendLine( "# " + lastHeader + " #" );
           }
           sb.Append( "[" + t.Name + "]" );
-          sb.Append( "(" + GetTypeString( t.Type ) + "|" + t.Entries.Count() + ")" );
+          sb.Append( "(" + Enum.GetName( typeof(TagType), t.Type )[0] + "|" + t.Entries.Count() + ")" );
           sb.Append( ", " );
         }
         sb.Remove( sb.Length - 2, 2 );
       }
-      client.WriteBlock( sb.ToString(), "md", msg.Channel );
+      this.client.SendMessage( sb.ToString(),
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = MessageType.Block, Hightlight = "md" } );
     }
-
-    private async void Info( MessageEventArgs msg, string[] args, IClient client )
+    private string Info( string tagName, ICommandChannel channel )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      string response = string.Empty;
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
-        client.WriteInfo( args[1] + " existiert nicht!", msg.Channel );
+        response = tagName + " existiert nicht!";
       else
       {
         StringBuilder sb = new StringBuilder( "==== " + tag.Name + " =====" );
@@ -330,15 +314,17 @@ namespace NerdyBot.Commands
         sb.Append( "Anzahl Einträge: " );
         sb.AppendLine( tag.Entries.Count.ToString() );
 
-        client.WriteBlock( sb.ToString(), "", msg.Channel );
+        this.client.SendMessage( sb.ToString(),
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = MessageType.Block } );
       }
+      return response;
     }
-
-    private async void Raw( MessageEventArgs msg, string[] args, IClient client )
+    private string Raw( string tagName, ICommandChannel channel )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[1].ToLower() );
+      string response = string.Empty;
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
-        client.WriteInfo( args[1] + " existiert nicht!", msg.Channel );
+        response = tagName + " existiert nicht!";
       else
       {
         StringBuilder sb = new StringBuilder( "==== " + tag.Name + " ====" );
@@ -348,37 +334,41 @@ namespace NerdyBot.Commands
         foreach ( string entry in tag.Entries )
           sb.AppendLine( entry );
 
-        client.WriteBlock( sb.ToString(), "", msg.Channel );
+        this.client.SendMessage( sb.ToString(),
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = MessageType.Block} );
       }
+      return response;
     }
-
-    private async void Send( MessageEventArgs msg, string[] args, IClient client )
+    private string Send( string tagName, ICommandMessage msg )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[0].ToLower() );
+      string response = string.Empty;
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
-        client.WriteInfo( args[0] + " existiert nicht!", msg.Channel );
+        response = tagName + " existiert nicht!";
       else
       {
         int idx = ( new Random() ).Next( 0, tag.Entries.Count() );
         switch ( tag.Type )
         {
         case TagType.Text:
-          client.WriteBlock( tag.Entries[idx], "", msg.Channel );
+          this.client.SendMessage( tag.Entries[idx],
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Block } );
           break;
         case TagType.Sound:
-          if ( msg.User.VoiceChannel != null )
+          if ( msg.User.VoiceChannelId != 0 )
           {
-            client.StopPlaying = false;
+            this.client.StopPlaying = false;
             string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
             if ( !File.Exists( path ) )
-              client.DownloadAudio( tag.Entries[idx], path );
-            client.SendAudio( msg.User.VoiceChannel, path );
+              this.client.DownloadAudio( tag.Entries[idx], path );
+            this.client.SendAudio( msg.User.VoiceChannelId, path );
           }
           else
-            client.WriteInfo( "In einen Voicechannel du musst!", msg.Channel );
+            response = "In einen Voicechannel du musst!";
           break;
         case TagType.Url:
-          client.Write( tag.Entries[idx], msg.Channel );
+          this.client.SendMessage( tag.Entries[idx],
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
           break;
         default:
           throw new ArgumentException( "WTF?!" );
@@ -386,6 +376,7 @@ namespace NerdyBot.Commands
         tag.Count++;
         this.conf.Write();
       }
+      return response;
     }
 
     private bool IsValidName( string name )
@@ -400,7 +391,7 @@ namespace NerdyBot.Commands
 
       tag.Entries = text.Split( new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries ).ToList();
     }
-    private void AddSoundToTag( Tag tag, string[] args, IClient client )
+    private void AddSoundToTag( Tag tag, string[] args )
     {
       string path = Path.Combine( "sounds", tag.Name );
       Directory.CreateDirectory( path );
@@ -408,7 +399,7 @@ namespace NerdyBot.Commands
 
       for ( int i = 0; i < args.Count(); i++ )
       {
-        client.DownloadAudio( args[i], Path.Combine( path, ( listCount + i ) + ".mp3" ) );
+        this.client.DownloadAudio( args[i], Path.Combine( path, ( listCount + i ) + ".mp3" ) );
         tag.Entries.Add( args[i] );
       }
     }

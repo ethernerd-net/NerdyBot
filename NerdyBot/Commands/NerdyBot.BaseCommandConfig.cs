@@ -1,15 +1,16 @@
-﻿using Newtonsoft.Json;
+﻿using NerdyBot.Contracts;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace NerdyBot.Commands.Config
 {
-  public class BaseCommandConfig : BaseConfig
+  public class BaseCommandConfig : BaseConfig, ICommandConfig
   {
-    public BaseCommandConfig( string defaultKey, params string[] aliases )
+    public BaseCommandConfig( string defaultKey, IEnumerable<string> aliases = null )
       :base( defaultKey )
     {      
       this.Key = defaultKey;
-      this.Aliases = aliases;
+      this.Aliases = aliases ?? new List<string>();
       this.RestrictedRoles = new List<ulong>();
       this.RestrictionType = RestrictType.None;
     }

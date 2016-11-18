@@ -1,5 +1,5 @@
-﻿using Discord;
-using NerdyBot.Commands.Config;
+﻿using NerdyBot.Commands.Config;
+using NerdyBot.Contracts;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -13,74 +13,84 @@ namespace NerdyBot.Commands
 {
   class RandomTag : ICommand
   {
-    private const string DEFAULTKEY = "random";
-    private static readonly string[] DEFAULTALIASES = new string[] { "rnd", "rand" };
-
     private BaseCommandConfig conf;
+    private const string DEFAULTKEY = "random";
+    private static readonly IEnumerable<string> DEFAULTALIASES = new string[] { "rnd", "rand" };
+
+    private IClient client;
 
     #region ICommand
-    public BaseCommandConfig Config { get { return this.conf; } }
+    public ICommandConfig Config { get { return this.conf; } }
 
-    public void Init()
+    public void Init( IClient client )
     {
       this.conf = new BaseCommandConfig( DEFAULTKEY, DEFAULTALIASES );
       //this.conf.Read();
+      this.client = client;
     }
 
-    public Task Execute( MessageEventArgs msg, string[] args, IClient client )
+    public Task Execute( ICommandMessage msg )
     {
       return Task.Factory.StartNew( () =>
       {
-        if ( args.Count() == 1 )
+        if ( msg.Arguments.Count() == 1 )
         {
-          switch ( args[0] )
+          switch ( msg.Arguments[0] )
           {
           case "cat":
             string catJson = ( new WebClient() ).DownloadString( "http://random.cat/meow" );
             var cat = JsonConvert.DeserializeObject<RandomCat>( catJson );
-            client.Write( cat.file.Replace( "\\", "" ), msg.Channel );
+            this.client.SendMessage( cat.file.Replace( "\\", "" ),
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             break;
 
           case "penguin":
             string pengu = ( new WebClient() ).DownloadString( "http://penguin.wtf/" );
-            client.Write( pengu, msg.Channel );
+            this.client.SendMessage( pengu,
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             break;
 
           case "bunny":
             string bunnyJson = ( new WebClient() ).DownloadString( "https://api.bunnies.io/v2/loop/random/?media=gif" );
             var bunny = JsonConvert.DeserializeObject<RandomBunny>( bunnyJson );
-            client.Write( bunny.media.gif, msg.Channel );          
+            this.client.SendMessage( bunny.media.gif,
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             break;
 
           case "chuck":
             string chuckJson = ( new WebClient() ).DownloadString( "http://api.icndb.com/jokes/random" );
             var chuck = JsonConvert.DeserializeObject<RandomChuck>( chuckJson );
-            client.Write( chuck.value.joke, msg.Channel );
+            this.client.SendMessage( chuck.value.joke,
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             break;
 
           case "joke":
             string jokeJson = ( new WebClient() ).DownloadString( "http://tambal.azurewebsites.net/joke/random" );
             var joke = JsonConvert.DeserializeObject<ChuckJoke>( jokeJson );
-            client.Write( joke.joke, msg.Channel );
+            this.client.SendMessage( joke.joke,
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             break;
 
           case "yomomma":          
             string momJson = ( new WebClient() ).DownloadString( "http://api.yomomma.info/" );
             var mom = JsonConvert.DeserializeObject<ChuckJoke>( momJson );
-            client.Write( mom.joke, msg.Channel );
+            this.client.SendMessage( mom.joke,
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             break;
 
           case "quote":
             string quoteJson = ( new WebClient() ).DownloadString( "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand" );
             var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
             string text = StripHTML( EntityToUnicode( quote.content ) );
-            client.WriteBlock( text + Environment.NewLine + Environment.NewLine + "-" + quote.title, "", msg.Channel );
+            this.client.SendMessage( text + Environment.NewLine + Environment.NewLine + "-" + quote.title,
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Block } );
             break;
 
           case "trump":
             string trumpJson = ( new WebClient() ).DownloadString( "https://api.whatdoestrumpthink.com/api/v1/quotes/random" );
             var trump = JsonConvert.DeserializeObject<TrumpQuote>( trumpJson );
-            client.Write( "Trump : " + trump.message, msg.Channel );
+            this.client.SendMessage( "Trump : " + trump.message,
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             break;
 
           case "xkcd":
@@ -89,20 +99,24 @@ namespace NerdyBot.Commands
 
             xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/" + ( new Random() ).Next( xkcd.num ) + "/info.0.json" );
             xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
-            client.Write( xkcd.img.Replace( "\\", "" ), msg.Channel );
+            this.client.SendMessage( xkcd.img.Replace( "\\", "" ),
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             break;
 
           case "help":
-            msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
+            this.client.SendMessage( FullHelp( client.Config.Prefix ),
+              new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
             break;
 
           default:
-            client.WriteInfo( "Invalider Parameter boi!", msg.Channel );
+            this.client.SendMessage( "Invalider Parameter boi!",
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
             break;
           }
         }
         else
-          client.WriteInfo( "Invalider Parameter boi!", msg.Channel );
+          this.client.SendMessage( "Invalider Parameter boi!",
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
       } );
     }
     public string QuickHelp()
@@ -153,46 +167,45 @@ namespace NerdyBot.Commands
     }
 
     #region jsonClasses
-    class RandomCat
+    private class RandomCat
     {
       public string file { get; set; }
     }
-    class RandomBunny
+    private class RandomBunny
     {
       public int id { get; set; }
       public BunnyMedia media { get; set; }
     }
-    class BunnyMedia
+    private class BunnyMedia
     {
       public string gif { get; set; }
       public string poster { get; set; }
     }
-    class RandomChuck
+    private class RandomChuck
     {
       public ChuckJoke value { get; set; }
     }
-    class ChuckJoke
+    private class ChuckJoke
     {
       public int id { get; set; }
       public string joke { get; set; }
     }
-    class RandomQuote
+    private class RandomQuote
     {
       public int ID { get; set; }
       public string title { get; set; }
       public string content { get; set; }
       public string link { get; set; }
     }
-    class TrumpQuote
+    private class TrumpQuote
     {
       public string message { get; set; }
     }
-    class RandomXKCD
+    private class RandomXKCD
     {
       public int num { get; set; }
       public string img { get; set; }
     }
-
-    #endregion
+    #endregion jsonClasses
   }
 }

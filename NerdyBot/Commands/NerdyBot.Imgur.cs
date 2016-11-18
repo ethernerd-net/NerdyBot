@@ -1,5 +1,5 @@
-﻿using Discord;
-using NerdyBot.Commands.Config;
+﻿using NerdyBot.Commands.Config;
+using NerdyBot.Contracts;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
@@ -12,29 +12,32 @@ namespace NerdyBot.Commands
 {
   class ImgurCommand : ICommand
   {
-    private const string DEFAULTKEY = "imgur";
-    private static readonly string[] DEFAULTALIASES = new string[] { "i" };
-
     private BaseCommandConfig conf;
+    private const string DEFAULTKEY = "imgur";
+    private static readonly IEnumerable<string> DEFAULTALIASES = new string[] { "i" };
+
+    private IClient client;
 
     #region ICommand
-    public BaseCommandConfig Config { get { return this.conf; } }
+    public ICommandConfig Config { get { return this.conf; } }
 
-    public void Init()
+    public void Init( IClient client )
     {
       this.conf = new BaseCommandConfig( DEFAULTKEY, DEFAULTALIASES );
       //this.conf.Read();
+      this.client = client;
     }
 
-    public Task Execute( MessageEventArgs msg, string[] args, IClient client )
+    public Task Execute( ICommandMessage msg )
     {
       return Task.Factory.StartNew( async () =>
       {
-        if ( args.Length == 1 && args[0] == "help" )
-          msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
+        if ( msg.Arguments.Length == 1 && msg.Arguments[0] == "help" )
+          this.client.SendMessage( FullHelp( client.Config.Prefix ),
+            new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
         else
         {
-          var request = WebRequest.CreateHttp( "https://api.imgur.com/3/gallery/search/viral?q=" + string.Join( " ", args ) );
+          var request = WebRequest.CreateHttp( "https://api.imgur.com/3/gallery/search/viral?q=" + string.Join( " ", msg.Arguments ) );
           request.Headers.Add( HttpRequestHeader.Authorization, "Client-ID 9101404d39fcd20" ); 
           var response = ( HttpWebResponse )await request.GetResponseAsync();
           using ( StreamReader reader = new StreamReader( response.GetResponseStream() ) )
@@ -43,9 +46,11 @@ namespace NerdyBot.Commands
             var imgurJson = JsonConvert.DeserializeObject<ImgurJson>( responseJson );
             ImgurData data;
             if ( imgurJson.success && ( data = imgurJson.data.FirstOrDefault() ) != null )
-              client.Write( data.link.Replace( "\\", "" ), msg.Channel );
+              this.client.SendMessage( data.link.Replace( "\\", "" ),
+                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
             else
-              client.WriteInfo( "No memes today.", msg.Channel );
+              this.client.SendMessage( "No memes today.",
+                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
           }
         }
       } );
@@ -71,17 +76,19 @@ namespace NerdyBot.Commands
     }
     #endregion ICommand
 
-    class ImgurJson
+    #region jsonClasses
+    private class ImgurJson
     {
       public bool success { get; set; }
       public List<ImgurData> data { get; set; }
     }
-    class ImgurData
+    private class ImgurData
     {
       public string id { get; set; }
       public string title { get; set; }
       public string link { get; set; }
       public int views { get; set; }
     }
+    #endregion jsonClasses
   }
 }
