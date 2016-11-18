@@ -34,7 +34,7 @@ namespace NerdyBot.Commands
           msg.User.SendMessage( "```" + FullHelp( client.Config.Prefix ) + "```" );
         else
         {
-          var youtubeService = new YouTubeService( new BaseClientService.Initializer()
+           var youtubeService = new YouTubeService( new BaseClientService.Initializer()
           {
             ApiKey = "AIzaSyAmrg8abuMO0esvieSZCdduxqog815QRnY",
             ApplicationName = this.GetType().ToString()
