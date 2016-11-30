@@ -16,13 +16,13 @@ namespace NerdyBot
 {
   partial class NerdyBot : IClient
   {
-    DiscordClient client;
-    AudioService audio;
-    Channel stdOutChannel;
-    MainConfig conf;
+    private DiscordClient client;
+    private AudioService audio;
+    private Channel stdOutChannel;
 
     private object playing = new object();
 
+    private MainConfig conf;
     private const string MAINCFG = "cfg";
 
     public NerdyBot()
@@ -82,7 +82,7 @@ namespace NerdyBot
     {
       bool isCommand = false;
       if ( stdOutChannel == null && e.Server != null )
-        stdOutChannel = e.Server.GetChannel( conf.ResponseChannel );
+        stdOutChannel = e.Server.GetChannel( conf.ResponseChannel ); //Response Channel kann leer sein, hier muss noch was getan werden!
 
       if ( e.Message.Text.Length > 1 && e.Message.Text.StartsWith( conf.Prefix.ToString() ) )
       {
@@ -101,14 +101,19 @@ namespace NerdyBot
             ShowHelp( e, args.Skip( 1 ).ToArray() );
           }
           else if ( input == "stop" )
+          {
+            isCommand = true;
             this.StopPlaying = true;
+          }
           else
           {
-            foreach ( var cmd in this.commands )
+            //Aus dieser forEach can ich nicht raus breaken :(
+            this.commands.ForEach( cmd =>
             {
               if ( input == cmd.Config.Key || cmd.Config.Aliases.Any( a => input == a ) )
               {
                 isCommand = true;
+                Log( e.User.ToString() + " executing " + cmd.Config.Key, e.Server.ToString() );
                 if ( CanExecute( e.User, cmd ) )
                   cmd.Execute( new CommandMessage()
                   {
@@ -131,7 +136,7 @@ namespace NerdyBot
                     }
                   } );
               }
-            }
+            } );
           }
         }
         else
@@ -318,6 +323,10 @@ namespace NerdyBot
         }
         else
         {
+          //Externe Prozesse sind böse, aber der kann so viel :S
+          //Ich könne allerdings auf die ganzen features verzichten und nen reinen yt dl anbieten
+          //https://github.com/flagbug/YoutubeExtractor <-- aber schon alt :S
+          //https://github.com/jamesqo/libvideo <-- kann kein audio?
           string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp.%(ext)s" );
           ProcessStartInfo ytdl = new System.Diagnostics.ProcessStartInfo();
           ytdl.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
@@ -329,6 +338,9 @@ namespace NerdyBot
         }
         if ( transform )
         {
+          //vielleicht bekomme ich das durch eine passende c# lib ersetzt?
+          //https://github.com/AydinAdn/MediaToolkit
+          //gibt auch diverse .net ffmpeg lösungen
           string tempFIle = Directory.GetFiles( Path.GetDirectoryName( outp ), "temp.*", SearchOption.TopDirectoryOnly ).First();
 
           ProcessStartInfo ffmpeg = new System.Diagnostics.ProcessStartInfo();
@@ -456,9 +468,9 @@ namespace NerdyBot
       return formatedMessage;
     }
 
-    public void Log( string text )
+    public void Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info )
     {
-      this.client.Log.Log( LogSeverity.Info, "", text );
+      this.client.Log.Log( logLevel, source, text );
     }
     #endregion
 

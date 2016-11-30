@@ -5,7 +5,7 @@ namespace NerdyBot.Contracts
   interface IClient
   {
     MainConfig Config { get; }
-    void Log( string text );
+    void Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info );
     void SendMessage( string message, SendMessageOptions options );
 
     void DownloadAudio( string url, string outp );
