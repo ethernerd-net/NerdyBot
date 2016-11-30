@@ -236,7 +236,7 @@ namespace NerdyBot.Commands
             response = remCount + " / " + entries.Count() + " removed";
             break;
           case "rename":
-            if ( !IsValidName( entries[0].ToLower() ) )
+            if ( IsValidName( entries[0].ToLower() ) )
             {
               if ( tag.Type != TagType.Text )
               {
@@ -247,7 +247,7 @@ namespace NerdyBot.Commands
               response = "Tag umbenannt in '" + tag.Name + "'!";
             }
             else
-              response = "Tag '" + args[1] + "' existiert bereits oder ist reserviert!!";
+              response = "Tag '" + entries[0] + "' existiert bereits oder ist reserviert!!";
             break;
           case "volume":
             break;
