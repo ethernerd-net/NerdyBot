@@ -1,15 +1,21 @@
-﻿using Discord;
-using Discord.Audio;
-using Discord.Commands;
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Net;
 using System.Diagnostics;
-using NAudio.Wave;
 using System.Text;
+
+using Discord;
+using Discord.Audio;
+using Discord.Commands;
+
+using CSCore;
+using CSCore.Codecs;
+using CSCore.MediaFoundation;
+using System.Threading.Tasks;
+
 using NerdyBot.Contracts;
 
 namespace NerdyBot
@@ -49,6 +55,7 @@ namespace NerdyBot
         x.Mode = AudioMode.Outgoing;
       } );
       this.audio = client.GetService<AudioService>();
+      CodecFactory.Instance.Register( "ogg-vorbis", new CodecFactoryEntry( s => new NVorbisSource( s ).ToWaveSource(), ".ogg" ) );
     }
 
     private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "leave", "join" };
@@ -90,61 +97,31 @@ namespace NerdyBot
         {
           string[] args = e.Message.Text.Substring( 1 ).Split( ' ' );
           string input = args[0].ToLower();
-          if ( input == "perm" )
+          switch ( input )
           {
-            isCommand = true;
+          case "perm":
             RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
-          }
-          else if ( input == "help" )
-          {
             isCommand = true;
+            break;
+          case "help":
             ShowHelp( e, args.Skip( 1 ).ToArray() );
-          }
-          else if ( input == "stop" )
-          {
             isCommand = true;
+            break;
+          case "stop":
             this.StopPlaying = true;
+            isCommand = true;
+            break;
+          default:
+            isCommand = await ExecuteCommand( e, input, args );
+            break;
           }
-          else
-          {
-            //Aus dieser forEach can ich nicht raus breaken :(
-            this.commands.ForEach( cmd =>
-            {
-              if ( input == cmd.Config.Key || cmd.Config.Aliases.Any( a => input == a ) )
-              {
-                isCommand = true;
-                Log( e.User.ToString() + " executing " + cmd.Config.Key, e.Server.ToString() );
-                if ( CanExecute( e.User, cmd ) )
-                  cmd.Execute( new CommandMessage()
-                  {
-                    Arguments = args.Skip( 1 ).ToArray(),
-                    Text = e.Message.Text,
-                    Channel = new CommandChannel()
-                    {
-                      Id = e.Channel.Id,
-                      Mention = e.Channel.Mention,
-                      Name = e.Channel.Name
-                    },
-                    User = new CommandUser()
-                    {
-                      Id = e.User.Id,
-                      Name = e.User.Name,
-                      FullName = e.User.ToString(),
-                      Mention = e.User.Mention,
-                      VoiceChannelId = e.User.VoiceChannel == null ? 0 : e.User.VoiceChannel.Id,
-                      Permissions = e.User.ServerPermissions
-                    }
-                  } );
-              }
-            } );
-          }
+
+          if ( isCommand )
+            e.Message.Delete();
         }
         else
           e.Channel.SendMessage( "Ich habe dir hier nichts zu sagen!" );
       }
-
-      if ( isCommand )
-        e.Message.Delete();
     }
 
     private bool CanExecute( User user, ICommand cmd )
@@ -280,6 +257,40 @@ namespace NerdyBot
       }
       SendMessage( sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = e.User.Id, Split = true, MessageType = MessageType.Block } );
     }
+    private async Task<bool> ExecuteCommand( MessageEventArgs e, string command, string[] args )
+    {
+      //Aus dieser forEach can ich nicht raus breaken :(
+      foreach ( var cmd in this.commands )
+      {
+        if ( command == cmd.Config.Key || cmd.Config.Aliases.Any( a => command == a ) )
+        {
+          Log( e.User.ToString() + " executing " + e.Message, e.Server.ToString() );
+          if ( CanExecute( e.User, cmd ) )
+            cmd.Execute( new CommandMessage()
+            {
+              Arguments = args.Skip( 1 ).ToArray(),
+              Text = e.Message.Text,
+              Channel = new CommandChannel()
+              {
+                Id = e.Channel.Id,
+                Mention = e.Channel.Mention,
+                Name = e.Channel.Name
+              },
+              User = new CommandUser()
+              {
+                Id = e.User.Id,
+                Name = e.User.Name,
+                FullName = e.User.ToString(),
+                Mention = e.User.Mention,
+                VoiceChannelId = e.User.VoiceChannel == null ? 0 : e.User.VoiceChannel.Id,
+                Permissions = e.User.ServerPermissions
+              }
+            } );
+          return true;
+        }
+      }
+      return false;
+    }
     #endregion MainCommands
 
     private void LogHandler( object sender, LogMessageEventArgs e )
@@ -296,6 +307,7 @@ namespace NerdyBot
          client.SetGame( "Not nerdy at all" );
        } );
     }
+
 
     #region IClient
     public MainConfig Config { get { return this.conf; } }
@@ -338,17 +350,8 @@ namespace NerdyBot
         }
         if ( transform )
         {
-          //vielleicht bekomme ich das durch eine passende c# lib ersetzt?
-          //https://github.com/AydinAdn/MediaToolkit
-          //gibt auch diverse .net ffmpeg lösungen
           string tempFIle = Directory.GetFiles( Path.GetDirectoryName( outp ), "temp.*", SearchOption.TopDirectoryOnly ).First();
-
-          ProcessStartInfo ffmpeg = new System.Diagnostics.ProcessStartInfo();
-          ffmpeg.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-          ffmpeg.FileName = "ext\\ffmpeg.exe";
-
-          ffmpeg.Arguments = "-i " + tempFIle + " -f mp3 " + outp;
-          Process.Start( ffmpeg ).WaitForExit();
+          ConvertAudio( tempFIle, outp );
 
           File.Delete( tempFIle );
         }
@@ -358,38 +361,36 @@ namespace NerdyBot
         throw new ArgumentException( ex.Message );
       }
     }
-    public async void SendAudio( ulong channelId, string localPath, bool delAfterPlay = false )
+    public void SendAudio( ulong channelId, string localPath, float volume = 1f, bool delAfterPlay = false )
     {
       Channel vChannel = this.client.Servers.First().VoiceChannels.FirstOrDefault( vc => vc.Id == channelId );
       lock ( playing )
       {
         IAudioClient vClient = audio.Join( vChannel ).Result;
-        Log( "reading " + Path.GetDirectoryName( localPath ) );
-        var channelCount = audio.Config.Channels; // Get the number of AudioChannels our AudioService has been configured to use.
-        var OutFormat = new WaveFormat( 48000, 16, channelCount ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
-        using ( var MP3Reader = new Mp3FileReader( localPath ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
-        using ( var resampler = new MediaFoundationResampler( MP3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
+        Log( "playing " + Path.GetDirectoryName( localPath ) );
+        try
         {
-          resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
-
-          int blockSize = OutFormat.AverageBytesPerSecond / 50; // Establish the size of our AudioBuffer
-          byte[] buffer = new byte[blockSize];
-          int byteCount;
-
-          Log( "start sending audio" );
-          while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && !StopPlaying ) // Read audio into our buffer, and keep a loop open while data is present
+          IWaveSource source = CodecFactory.Instance.GetCodec( localPath );
+          source = source.ChangeSampleRate( 48000 ); //Audio plays too fast if not 48k
+          using ( source )
           {
-            if ( byteCount < blockSize )
+            byte[] buffer = new byte[source.WaveFormat.BytesPerSecond];
+            int read;
+            while ( ( read = source.Read( buffer, 0, buffer.Length ) ) > 0 && !StopPlaying )
             {
-              // Incomplete Frame
-              for ( int i = byteCount; i < blockSize; i++ )
-                buffer[i] = 0;
+              vClient.Send( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, read ); // Send the buffer to Discord
+
+              Console.CursorLeft = 0;
+              Console.Write( "{0:P}/{1:P}", ( double )source.Position / source.Length, 1 );
             }
-            vClient.Send( buffer, 0, blockSize ); // Send the buffer to Discord
+            Console.WriteLine();
           }
-          Log( "finished sending" );
+          vClient.Wait();
         }
-        vClient.Wait();
+        catch ( Exception )
+        {
+          Console.WriteLine( "Format not supported." );
+        }
         StopPlaying = false;
         if ( delAfterPlay )
           File.Delete( localPath );
@@ -481,6 +482,23 @@ namespace NerdyBot
         return Enumerable.Range( 0, str.Length / chunkSize )
           .Select( i => str.Substring( i * chunkSize, chunkSize ) );
       return new string[] { str };
+    }
+
+    private void ConvertAudio( string inFile, string outFile )
+    {
+      Log( "converting: " + Path.GetFileName( outFile ) );
+      using ( IWaveSource source = CodecFactory.Instance.GetCodec( inFile ) )
+      {
+        using ( var encoder = MediaFoundationEncoder.CreateMP3Encoder( source.WaveFormat, outFile ) )
+        {
+          byte[] buffer = new byte[source.WaveFormat.BytesPerSecond];
+          int read;
+          while ( ( read = source.Read( buffer, 0, buffer.Length ) ) > 0 )
+          {
+            encoder.Write( buffer, 0, read );
+          }
+        }
+      }
     }
   }
 }

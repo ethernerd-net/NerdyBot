@@ -1,12 +1,14 @@
-﻿using Discord;
-using NerdyBot.Commands.Config;
-using NerdyBot.Contracts;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using Discord;
+
+using NerdyBot.Commands.Config;
+using NerdyBot.Contracts;
 
 namespace NerdyBot.Commands
 {
@@ -250,6 +252,11 @@ namespace NerdyBot.Commands
               response = "Tag '" + entries[0] + "' existiert bereits oder ist reserviert!!";
             break;
           case "volume":
+            short vol;
+            if ( short.TryParse( entries[0], out vol ) && vol > 0 && vol <= 100 )
+              tag.Volume = vol;
+            else
+              response = "Die Lautstärke muss eine Zahl zwischen 0 und 101 sein!";
             break;
           default:
             return "Die Option Name '" + args[2] + "' ist nicht valide!";
@@ -261,7 +268,7 @@ namespace NerdyBot.Commands
       }
       return response;
     }
-    private async void List( ICommandChannel channel )
+    private void List( ICommandChannel channel )
     {
       var tagsInOrder = this.conf.Ext.Tags.OrderBy( x => x.Name );
       StringBuilder sb = new StringBuilder( "" );
@@ -361,7 +368,7 @@ namespace NerdyBot.Commands
             string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
             if ( !File.Exists( path ) )
               this.client.DownloadAudio( tag.Entries[idx], path );
-            this.client.SendAudio( msg.User.VoiceChannelId, path );
+            this.client.SendAudio( msg.User.VoiceChannelId, path, tag.Volume / 100f );
           }
           else
             response = "In einen Voicechannel du musst!";
