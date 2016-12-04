@@ -192,8 +192,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ext\ffmpeg.exe" />
-    <Content Include="ext\ffprobe.exe" />
     <Content Include="ext\libmp3lame.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
