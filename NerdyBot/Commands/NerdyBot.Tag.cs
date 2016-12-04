@@ -44,32 +44,18 @@ namespace NerdyBot.Commands
       {
         string response = "Invalid parameter count, check help for... guess what?";
         var subArgs = msg.Arguments.Skip( 1 ).ToArray();
+        string option = msg.Arguments.First().ToLower();
 
-        switch ( msg.Arguments[0].ToLower() )
+        switch ( option )
         {
         case "create":
           if ( msg.Arguments.Count() >= 4 )
             response = Create( subArgs, msg.User.FullName );
           break;
 
-        case "delete":
-          if ( msg.Arguments.Count() == 2 )
-            response = Delete( subArgs.First() );
-          break;
-
         case "edit":
           if ( msg.Arguments.Count() >= 4 )
             response = Edit( subArgs, msg.User.FullName, msg.User.Permissions );
-          break;
-
-        case "info":
-          if ( msg.Arguments.Count() >= 2 )
-            response = Info( subArgs.First(), msg.Channel );
-          break;
-
-        case "raw":
-          if ( msg.Arguments.Count() >= 2 )
-            response = Raw( subArgs.First(), msg.Channel );
           break;
 
         case "list":
@@ -82,9 +68,48 @@ namespace NerdyBot.Commands
             new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
           break;
 
+        case "delete":
+        case "info":
+        case "raw":
         default:
-          if ( msg.Arguments.Count() == 1 )
-            response = Send( msg.Arguments.First(), msg );
+          string tagName = subArgs.First().ToLower();
+          var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName );
+          if ( tag != null )
+          {
+            switch ( option )
+            {
+            case "delete":
+              if ( msg.Arguments.Count() == 2 )
+              {
+                Delete( tag );
+                response = "Tag '" + tag.Name + "' delete!";
+              }
+              break;
+            case "info":
+              if ( msg.Arguments.Count() >= 2 )
+              {
+                Info( tag, msg.Channel );
+                response = string.Empty;
+              }
+              break;
+            case "raw":
+              if ( msg.Arguments.Count() >= 2 )
+              {
+                Raw( tag, msg.Channel );
+                response = string.Empty;
+              }
+              break;
+            default:
+              if ( msg.Arguments.Count() == 1 )
+              {
+                Send( tag, msg );
+                response = string.Empty;
+              }
+              break;
+            }
+          }
+          else
+            response = "Tag '" + tagName + "' existiert nicht!";
           break;
         }
         if ( response != string.Empty )
@@ -185,29 +210,12 @@ namespace NerdyBot.Commands
       }
       return response;
     }
-    private string Delete( string tagName )
-    {
-      string reponse = string.Empty;
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
-      if ( tag == null )
-        reponse = "Tag '" + tagName + "' existiert nicht!";
-      else
-      {
-        if ( tag.Type == TagType.Sound )
-          Directory.Delete( Path.Combine( "sounds", tag.Name ), true );
-
-        this.conf.Ext.Tags.Remove( tag );
-        this.conf.Write();
-        reponse = "Tag '" + tag.Name + "' delete!";
-      }
-      return reponse;
-    }
     private string Edit( string[] args, string author, ServerPermissions permissions )
     {
       string response = string.Empty;
       var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[0].ToLower() );
       if ( tag == null )
-        response =  "Tag '" + args[0] + "' existiert nicht!";
+        response = "Tag '" + args[0] + "' existiert nicht!";
       else
       {
         if ( tag.Author == author || permissions.Administrator )
@@ -286,7 +294,7 @@ namespace NerdyBot.Commands
             sb.AppendLine( "# " + lastHeader + " #" );
           }
           sb.Append( "[" + t.Name + "]" );
-          sb.Append( "(" + Enum.GetName( typeof(TagType), t.Type )[0] + "|" + t.Entries.Count() + ")" );
+          sb.Append( "(" + Enum.GetName( typeof( TagType ), t.Type )[0] + "|" + t.Entries.Count() + ")" );
           sb.Append( ", " );
         }
         sb.Remove( sb.Length - 2, 2 );
@@ -294,96 +302,78 @@ namespace NerdyBot.Commands
       this.client.SendMessage( sb.ToString(),
         new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = MessageType.Block, Hightlight = "md" } );
     }
-    private string Info( string tagName, ICommandChannel channel )
+    private void Delete( Tag tag )
     {
-      string response = string.Empty;
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
-      if ( tag == null )
-        response = tagName + " existiert nicht!";
-      else
-      {
-        StringBuilder sb = new StringBuilder( "==== " + tag.Name + " =====" );
-        sb.AppendLine();
-        sb.AppendLine();
+      if ( tag.Type == TagType.Sound )
+        Directory.Delete( Path.Combine( "sounds", tag.Name ), true );
 
-        sb.Append( "Author: " );
-        sb.AppendLine( tag.Author );
-
-        sb.Append( "Typ: " );
-        sb.AppendLine( Enum.GetName( typeof( TagType ), tag.Type ) );
-
-        sb.Append( "Erstellungs Datum: " );
-        sb.AppendLine( tag.CreateDate.ToLongDateString() );
-
-        sb.Append( "Hits: " );
-        sb.AppendLine( tag.Count.ToString() );
-
-        sb.Append( "Anzahl Einträge: " );
-        sb.AppendLine( tag.Entries.Count.ToString() );
-
-        this.client.SendMessage( sb.ToString(),
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = MessageType.Block } );
-      }
-      return response;
+      this.conf.Ext.Tags.Remove( tag );
+      this.conf.Write();
     }
-    private string Raw( string tagName, ICommandChannel channel )
+    private void Info( Tag tag, ICommandChannel channel )
     {
-      string response = string.Empty;
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
-      if ( tag == null )
-        response = tagName + " existiert nicht!";
-      else
-      {
-        StringBuilder sb = new StringBuilder( "==== " + tag.Name + " ====" );
-        sb.AppendLine();
-        sb.AppendLine();
+      StringBuilder sb = new StringBuilder( "==== " + tag.Name + " =====" );
+      sb.AppendLine();
+      sb.AppendLine();
 
-        foreach ( string entry in tag.Entries )
-          sb.AppendLine( entry );
+      sb.Append( "Author: " );
+      sb.AppendLine( tag.Author );
 
-        this.client.SendMessage( sb.ToString(),
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = MessageType.Block} );
-      }
-      return response;
+      sb.Append( "Typ: " );
+      sb.AppendLine( Enum.GetName( typeof( TagType ), tag.Type ) );
+
+      sb.Append( "Erstellungs Datum: " );
+      sb.AppendLine( tag.CreateDate.ToLongDateString() );
+
+      sb.Append( "Hits: " );
+      sb.AppendLine( tag.Count.ToString() );
+
+      sb.Append( "Anzahl Einträge: " );
+      sb.AppendLine( tag.Entries.Count.ToString() );
+
+      this.client.SendMessage( sb.ToString(),
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = MessageType.Block } );
     }
-    private string Send( string tagName, ICommandMessage msg )
+    private void Raw( Tag tag, ICommandChannel channel )
     {
-      string response = string.Empty;
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
-      if ( tag == null )
-        response = tagName + " existiert nicht!";
-      else
+      StringBuilder sb = new StringBuilder( "==== " + tag.Name + " ====" );
+      sb.AppendLine();
+      sb.AppendLine();
+
+      foreach ( string entry in tag.Entries )
+        sb.AppendLine( entry );
+
+      this.client.SendMessage( sb.ToString(),
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = MessageType.Block } );
+    }
+    private void Send( Tag tag, ICommandMessage msg )
+    {
+      int idx = ( new Random() ).Next( 0, tag.Entries.Count() );
+      switch ( tag.Type )
       {
-        int idx = ( new Random() ).Next( 0, tag.Entries.Count() );
-        switch ( tag.Type )
+      case TagType.Text:
+        this.client.SendMessage( tag.Entries[idx],
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Block } );
+        break;
+      case TagType.Sound:
+        if ( msg.User.VoiceChannelId != 0 )
         {
-        case TagType.Text:
-          this.client.SendMessage( tag.Entries[idx],
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Block } );
-          break;
-        case TagType.Sound:
-          if ( msg.User.VoiceChannelId != 0 )
-          {
-            this.client.StopPlaying = false;
-            string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
-            if ( !File.Exists( path ) )
-              this.client.DownloadAudio( tag.Entries[idx], path );
-            this.client.SendAudio( msg.User.VoiceChannelId, path, tag.Volume / 100f );
-          }
-          else
-            response = "In einen Voicechannel du musst!";
-          break;
-        case TagType.Url:
-          this.client.SendMessage( tag.Entries[idx],
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
-          break;
-        default:
-          throw new ArgumentException( "WTF?!" );
+          this.client.StopPlaying = false;
+          string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
+          if ( !File.Exists( path ) )
+            this.client.DownloadAudio( tag.Entries[idx], path );
+          this.client.SendAudio( msg.User.VoiceChannelId, path, tag.Volume / 100f );
         }
-        tag.Count++;
-        this.conf.Write();
+        break;
+      case TagType.Url:
+        this.client.SendMessage( tag.Entries[idx],
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id } );
+        break;
+      default:
+        throw new ArgumentException( "WTF?!" );
       }
-      return response;
+      tag.Count++;
+      this.conf.Write();
     }
 
     private bool IsValidName( string name )

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord;
-using NerdyBot.Commands.Config;
 using System.Text;
 using System.Collections.Generic;
+
 using NerdyBot.Contracts;
+using NerdyBot.Commands.Config;
 
 namespace NerdyBot.Commands
 {

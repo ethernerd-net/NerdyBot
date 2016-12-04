@@ -1,12 +1,14 @@
-﻿using NerdyBot.Commands.Config;
-using NerdyBot.Contracts;
-using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+
+using Newtonsoft.Json;
+
+using NerdyBot.Commands.Config;
+using NerdyBot.Contracts;
 
 namespace NerdyBot.Commands
 {
@@ -24,7 +26,6 @@ namespace NerdyBot.Commands
     public void Init( IClient client )
     {
       this.conf = new BaseCommandConfig( DEFAULTKEY, DEFAULTALIASES );
-      //this.conf.Read();
       this.client = client;
     }
 
