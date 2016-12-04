@@ -49,7 +49,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>marvin-the-hitchhikers-guide-to-the-galaxy-android-gpp-prototype-marvin-the-hitchhikers-guide-to-the-galaxy-robots-paranoid.jpg_1.ico</ApplicationIcon>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BouncyCastle.Crypto, Version=1.7.4137.9688, Culture=neutral, PublicKeyToken=a4292a325f69b123, processorArchitecture=MSIL">
@@ -160,15 +160,15 @@
     <Compile Include="Commands\NerdyBot.Youtube.cs" />
     <Compile Include="NerdyBot.BaseConfig.cs" />
     <Compile Include="Contracts\IClient.cs" />
-    <Compile Include="NerdyBot.CommandMessage.cs" />
+    <Compile Include="Contracts\NerdyBot.CommandMessage.cs" />
     <Compile Include="NerdyBot.cs" />
-    <Compile Include="NerdyBot.MainConfig.cs" />
+    <Compile Include="NerdyBot.BotConfig.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Commands\NerdyBot.Tag.Config.cs" />
     <Compile Include="Commands\NerdyBot.Tag.cs" />
-    <Compile Include="ScaleVolume.cs" />
-    <Compile Include="NVorbisSource.cs" />
+    <Compile Include="Helper\ScaleVolume.cs" />
+    <Compile Include="Helper\NVorbisSource.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -198,7 +198,7 @@
     <Content Include="ext\youtube-dl.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="marvin-the-hitchhikers-guide-to-the-galaxy-android-gpp-prototype-marvin-the-hitchhikers-guide-to-the-galaxy-robots-paranoid.jpg_1.ico" />
+    <Content Include="icon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
