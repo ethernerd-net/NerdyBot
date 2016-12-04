@@ -14,7 +14,6 @@ using Discord.Commands;
 using CSCore;
 using CSCore.Codecs;
 using CSCore.MediaFoundation;
-using System.Threading.Tasks;
 
 using NerdyBot.Contracts;
 
@@ -24,7 +23,6 @@ namespace NerdyBot
   {
     private DiscordClient client;
     private AudioService audio;
-    private Channel stdOutChannel;
 
     private object playing = new object();
 
@@ -47,9 +45,7 @@ namespace NerdyBot
         x.PrefixChar = conf.Prefix;
         x.AllowMentionPrefix = true;
       } );
-
-      client.MessageReceived += Discord_MessageReceived;
-
+      
       client.UsingAudio( x =>
       {
         x.Mode = AudioMode.Outgoing;
@@ -63,6 +59,8 @@ namespace NerdyBot
     private List<ICommand> commands = new List<ICommand>();
     private void InitCommands()
     {
+      var svc = client.GetService<CommandService>();
+      InitMainCommands( svc );
       try
       {
         Assembly assembly = Assembly.GetExecutingAssembly();
@@ -76,6 +74,34 @@ namespace NerdyBot
             if ( !CanLoadCommand( command ) )
               throw new InvalidOperationException( "Duplicated command key or alias: " + command.Config.Key );
             this.commands.Add( command );
+
+            svc.CreateCommand( command.Config.Key )
+              .Alias( command.Config.Aliases.ToArray() )
+              .Parameter( "args", ParameterType.Multiple )
+              .Do( e =>
+              {
+                command.Execute( new CommandMessage()
+                {
+                  Arguments = e.Args,
+                  Text = e.Message.Text,
+                  Channel = new CommandChannel()
+                  {
+                    Id = e.Channel.Id,
+                    Mention = e.Channel.Mention,
+                    Name = e.Channel.Name
+                  },
+                  User = new CommandUser()
+                  {
+                    Id = e.User.Id,
+                    Name = e.User.Name,
+                    FullName = e.User.ToString(),
+                    Mention = e.User.Mention,
+                    VoiceChannelId = e.User.VoiceChannel == null ? 0 : e.User.VoiceChannel.Id,
+                    Permissions = e.User.ServerPermissions
+                  }
+                } );
+                e.Message.Delete();
+              } );
           }
         }
       }
@@ -83,6 +109,48 @@ namespace NerdyBot
       {
         throw new InvalidOperationException( "Schade", ex );
       }
+    }
+    private void InitMainCommands( CommandService svc )
+    {
+      svc.CreateCommand( "help" )
+        .Parameter( "args", ParameterType.Multiple )
+        .Do( e =>
+        {
+          ShowHelp( e, e.Args );
+          e.Message.Delete();
+        } );
+      svc.CreateCommand( "perm" )
+        .Parameter( "args", ParameterType.Multiple )
+        .Do( e =>
+        {
+          RestrictCommandByRole( e, e.Args );
+          e.Message.Delete();
+        } );
+      svc.CreateCommand( "stop" )
+        .Do( e =>
+        {
+          this.StopPlaying = true;
+          e.Message.Delete();
+        } );
+      svc.CreateCommand( "leave" )
+        .Do( e =>
+        {
+          if ( e.User.VoiceChannel != null )
+            this.audio.Leave( e.User.VoiceChannel );
+          e.Message.Delete();
+        } );
+      svc.CreateCommand( "join" )
+        .Do( e =>
+        {
+          if ( e.User.VoiceChannel != null )
+            this.audio.Join( e.User.VoiceChannel );
+          e.Message.Delete();
+        } );
+      svc.CreateCommand( "backup" )
+        .Do( e =>
+        {
+          e.Message.Delete();
+        } );
     }
 
     private bool CanExecute( User user, ICommand cmd )
@@ -121,60 +189,8 @@ namespace NerdyBot
       return true;
     }
 
-    private void Discord_MessageReceived( object sender, MessageEventArgs e )
-    {
-      bool isCommand = false;
-      if ( stdOutChannel == null && e.Server != null )
-        stdOutChannel = e.Server.GetChannel( conf.ResponseChannel ); //Response Channel kann leer sein, hier muss noch was getan werden!
-
-      if ( e.Message.Text.Length > 1 && e.Message.Text.StartsWith( conf.Prefix.ToString() ) )
-      {
-        if ( e.Server != null )
-        {
-          string[] args = e.Message.Text.Substring( 1 ).Split( ' ' );
-          string input = args[0].ToLower();
-          switch ( input )
-          {
-          case "perm":
-            RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
-            isCommand = true;
-            break;
-          case "help":
-            ShowHelp( e, args.Skip( 1 ).ToArray() );
-            isCommand = true;
-            break;
-          case "stop":
-            this.StopPlaying = true;
-            isCommand = true;
-            break;
-          case "leave":
-            if ( e.User.VoiceChannel != null )
-              this.audio.Leave( e.User.VoiceChannel );
-            isCommand = true;
-            break;
-          case "join":
-            if ( e.User.VoiceChannel != null )
-              this.audio.Join( e.User.VoiceChannel );
-            isCommand = true;
-            break;
-          case "backup":
-            //TODO
-            break;
-          default:
-            isCommand = ExecuteCommand( e, input, args ).Result;
-            break;
-          }
-
-          if ( isCommand )
-            e.Message.Delete();
-        }
-        else
-          e.Channel.SendMessage( "Ich habe dir hier nichts zu sagen!" );
-      }
-    }
-
     #region MainCommands
-    private void RestrictCommandByRole( MessageEventArgs e, string[] args )
+    private void RestrictCommandByRole( CommandEventArgs e, string[] args )
     {
       string info = string.Empty;
       if ( e.User.ServerPermissions.Administrator )
@@ -247,7 +263,7 @@ namespace NerdyBot
         info = "Du bist zu unwichtig dafür!";
       SendMessage( info, new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = e.Channel.Id, MessageType = MessageType.Info } );
     }
-    private void ShowHelp( MessageEventArgs e, IEnumerable<string> args )
+    private void ShowHelp( CommandEventArgs e, IEnumerable<string> args )
     {
       StringBuilder sb = new StringBuilder();
       if ( args.Count() == 0 )
@@ -269,43 +285,9 @@ namespace NerdyBot
       }
       SendMessage( sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = e.User.Id, Split = true, MessageType = MessageType.Block } );
     }
-    private void Backup( MessageEventArgs e, IEnumerable<string> args )
+    private void Backup( CommandEventArgs e, IEnumerable<string> args )
     {
       //https://developers.google.com/drive/v3/web/quickstart/dotnet
-    }
-    private async Task<bool> ExecuteCommand( MessageEventArgs e, string command, string[] args )
-    {
-      //Aus dieser forEach can ich nicht raus breaken :(
-      foreach ( var cmd in this.commands )
-      {
-        if ( command == cmd.Config.Key || cmd.Config.Aliases.Any( a => command == a ) )
-        {
-          Log( e.User.ToString() + " executing " + e.Message, e.Server.ToString() );
-          if ( CanExecute( e.User, cmd ) )
-            cmd.Execute( new CommandMessage()
-            {
-              Arguments = args.Skip( 1 ).ToArray(),
-              Text = e.Message.Text,
-              Channel = new CommandChannel()
-              {
-                Id = e.Channel.Id,
-                Mention = e.Channel.Mention,
-                Name = e.Channel.Name
-              },
-              User = new CommandUser()
-              {
-                Id = e.User.Id,
-                Name = e.User.Name,
-                FullName = e.User.ToString(),
-                Mention = e.User.Mention,
-                VoiceChannelId = e.User.VoiceChannel == null ? 0 : e.User.VoiceChannel.Id,
-                Permissions = e.User.ServerPermissions
-              }
-            } );
-          return true;
-        }
-      }
-      return false;
     }
     #endregion MainCommands
 
