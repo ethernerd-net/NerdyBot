@@ -263,7 +263,7 @@ namespace NerdyBot
       {
         var command = this.commands.FirstOrDefault( cmd => cmd.Config.Key == args.First() || cmd.Config.Aliases.Any( ali => ali == args.First() ) );
         if ( commands != null )
-          sb = new StringBuilder( command.FullHelp( this.conf.Prefix ) );
+          sb = new StringBuilder( command.FullHelp() );
         else
           sb = new StringBuilder( "Du kennst anscheinend mehr Commands als ich!" );
       }
@@ -326,8 +326,6 @@ namespace NerdyBot
 
 
     #region IClient
-    public MainConfig Config { get { return this.conf; } }
-
     public bool StopPlaying { get; set; }
     public void DownloadAudio( string url, string outp )
     {

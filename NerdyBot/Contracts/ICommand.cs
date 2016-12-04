@@ -15,6 +15,6 @@ namespace NerdyBot.Contracts
     /// <returns></returns>
     Task Execute( ICommandMessage msg );
     string QuickHelp();
-    string FullHelp( char prefix );
+    string FullHelp();
   }
 }

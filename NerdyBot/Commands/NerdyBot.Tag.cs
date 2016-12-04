@@ -78,7 +78,7 @@ namespace NerdyBot.Commands
           break;
 
         case "help":
-          this.client.SendMessage( FullHelp( client.Config.Prefix ),
+          this.client.SendMessage( FullHelp(),
             new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
           break;
 
@@ -104,7 +104,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: " + this.conf.Key );
       return sb.ToString();
     }
-    public string FullHelp( char prefix )
+    public string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );
@@ -112,32 +112,32 @@ namespace NerdyBot.Commands
       sb.AppendLine();
       sb.AppendLine();
       sb.AppendLine( "===> create" );
-      sb.AppendLine( prefix + this.conf.Key + " create [tagname] [typ] {liste}" );
+      sb.AppendLine( this.conf.Key + " create [tagname] [typ] {liste}" );
       sb.AppendLine( "tagname: Einzigartiger Name zum identifizieren des Bausteins" );
       sb.AppendLine( "typ: sound | text | url" );
       sb.AppendLine( "liste: leerzeichen getrennte liste an urls / texte sind getrennt durch ';;' (ohne '')" );
       sb.AppendLine();
       sb.AppendLine( "===> delete" );
-      sb.AppendLine( prefix + this.conf.Key + " delete [tagname]" );
+      sb.AppendLine( this.conf.Key + " delete [tagname]" );
       sb.AppendLine( "Löscht einen Tag und dazugehörige Elemente" );
       sb.AppendLine();
       sb.AppendLine( "===> edit" );
-      sb.AppendLine( prefix + this.conf.Key + " edit [tagname] [option] {}" );
+      sb.AppendLine( this.conf.Key + " edit [tagname] [option] {}" );
       sb.AppendLine( "option: add | remove | rename" );
       sb.AppendLine( " -> add: Wie beim create kann hier eine Liste an URLs/Text angehängt werden um den Baustein zu erweitern" );
       sb.AppendLine( " -> remove: Entfernt den entsprechenden Text/Url aus der Inventar des Tags" );
       sb.AppendLine( " -> rename: Erlaubt das umbenennen des kompletten Tags" );
       sb.AppendLine();
       sb.AppendLine( "===> list" );
-      sb.AppendLine( prefix + this.conf.Key + " list" );
+      sb.AppendLine( this.conf.Key + " list" );
       sb.AppendLine( "Listet alle vorhandenen Tags auf" );
       sb.AppendLine();
       sb.AppendLine( "===> stop" );
-      sb.AppendLine( prefix + this.conf.Key + " stop" );
+      sb.AppendLine( this.conf.Key + " stop" );
       sb.AppendLine( "Stopt das abspielen eines Sound Tags" );
       sb.AppendLine();
       sb.AppendLine( "===> help" );
-      sb.AppendLine( prefix + this.conf.Key + " help" );
+      sb.AppendLine( this.conf.Key + " help" );
       sb.AppendLine( ">_>" );
       sb.AppendLine();
       sb.AppendLine();

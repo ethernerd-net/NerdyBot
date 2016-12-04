@@ -104,7 +104,7 @@ namespace NerdyBot.Commands
             break;
 
           case "help":
-            this.client.SendMessage( FullHelp( client.Config.Prefix ),
+            this.client.SendMessage( FullHelp(),
               new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
             break;
 
@@ -128,13 +128,13 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: " + this.conf.Key );
       return sb.ToString();
     }
-    public string FullHelp( char prefix )
+    public string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );
       sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
       sb.AppendLine();
-      sb.AppendLine( prefix + this.conf.Key + " [option]" );
+      sb.AppendLine( this.conf.Key + " [option]" );
       sb.AppendLine( "option: cat | penguin | bunny | chuck | joke | yomomma | quote | trump | xkcd | help" );
       return sb.ToString();
     }

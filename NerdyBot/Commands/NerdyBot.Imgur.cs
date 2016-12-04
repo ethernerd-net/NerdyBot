@@ -33,7 +33,7 @@ namespace NerdyBot.Commands
       return Task.Factory.StartNew( async () =>
       {
         if ( msg.Arguments.Length == 1 && msg.Arguments[0] == "help" )
-          this.client.SendMessage( FullHelp( client.Config.Prefix ),
+          this.client.SendMessage( FullHelp(),
             new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
         else
         {
@@ -65,13 +65,13 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: " + this.conf.Key );
       return sb.ToString();
     }
-    public string FullHelp( char prefix )
+    public string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );
       sb.AppendLine( "Aliase: " + string.Join( " | ", this.conf.Aliases ) );
       sb.AppendLine();
-      sb.AppendLine( "Beispiel: " + prefix + this.conf.Key + " [KEYWORDS]" );
+      sb.AppendLine( "Beispiel: " + this.conf.Key + " [KEYWORDS]" );
       return sb.ToString();
     }
     #endregion ICommand
