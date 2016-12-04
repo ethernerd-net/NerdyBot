@@ -58,7 +58,7 @@ namespace NerdyBot
       CodecFactory.Instance.Register( "ogg-vorbis", new CodecFactoryEntry( s => new NVorbisSource( s ).ToWaveSource(), ".ogg" ) );
     }
 
-    private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "leave", "join" };
+    private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "leave", "join", "backup" };
 
     private List<ICommand> commands = new List<ICommand>();
     private void InitCommands()
@@ -82,45 +82,6 @@ namespace NerdyBot
       catch ( Exception ex )
       {
         throw new InvalidOperationException( "Schade", ex );
-      }
-    }
-
-    private async void Discord_MessageReceived( object sender, MessageEventArgs e )
-    {
-      bool isCommand = false;
-      if ( stdOutChannel == null && e.Server != null )
-        stdOutChannel = e.Server.GetChannel( conf.ResponseChannel ); //Response Channel kann leer sein, hier muss noch was getan werden!
-
-      if ( e.Message.Text.Length > 1 && e.Message.Text.StartsWith( conf.Prefix.ToString() ) )
-      {
-        if ( e.Server != null )
-        {
-          string[] args = e.Message.Text.Substring( 1 ).Split( ' ' );
-          string input = args[0].ToLower();
-          switch ( input )
-          {
-          case "perm":
-            RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
-            isCommand = true;
-            break;
-          case "help":
-            ShowHelp( e, args.Skip( 1 ).ToArray() );
-            isCommand = true;
-            break;
-          case "stop":
-            this.StopPlaying = true;
-            isCommand = true;
-            break;
-          default:
-            isCommand = await ExecuteCommand( e, input, args );
-            break;
-          }
-
-          if ( isCommand )
-            e.Message.Delete();
-        }
-        else
-          e.Channel.SendMessage( "Ich habe dir hier nichts zu sagen!" );
       }
     }
 
@@ -149,7 +110,6 @@ namespace NerdyBot
       }
       return ret;
     }
-
     private bool CanLoadCommand( ICommand command )
     {
       if ( preservedKeys.Contains( command.Config.Key ) )
@@ -159,6 +119,58 @@ namespace NerdyBot
             command.Config.Aliases.Any( ali2 => ali == ali2 ) ) ) )
         return false;
       return true;
+    }
+
+    private void Discord_MessageReceived( object sender, MessageEventArgs e )
+    {
+      bool isCommand = false;
+      if ( stdOutChannel == null && e.Server != null )
+        stdOutChannel = e.Server.GetChannel( conf.ResponseChannel ); //Response Channel kann leer sein, hier muss noch was getan werden!
+
+      if ( e.Message.Text.Length > 1 && e.Message.Text.StartsWith( conf.Prefix.ToString() ) )
+      {
+        if ( e.Server != null )
+        {
+          string[] args = e.Message.Text.Substring( 1 ).Split( ' ' );
+          string input = args[0].ToLower();
+          switch ( input )
+          {
+          case "perm":
+            RestrictCommandByRole( e, args.Skip( 1 ).ToArray() );
+            isCommand = true;
+            break;
+          case "help":
+            ShowHelp( e, args.Skip( 1 ).ToArray() );
+            isCommand = true;
+            break;
+          case "stop":
+            this.StopPlaying = true;
+            isCommand = true;
+            break;
+          case "leave":
+            if ( e.User.VoiceChannel != null )
+              this.audio.Leave( e.User.VoiceChannel );
+            isCommand = true;
+            break;
+          case "join":
+            if ( e.User.VoiceChannel != null )
+              this.audio.Join( e.User.VoiceChannel );
+            isCommand = true;
+            break;
+          case "backup":
+            //TODO
+            break;
+          default:
+            isCommand = ExecuteCommand( e, input, args ).Result;
+            break;
+          }
+
+          if ( isCommand )
+            e.Message.Delete();
+        }
+        else
+          e.Channel.SendMessage( "Ich habe dir hier nichts zu sagen!" );
+      }
     }
 
     #region MainCommands
@@ -257,6 +269,10 @@ namespace NerdyBot
       }
       SendMessage( sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = e.User.Id, Split = true, MessageType = MessageType.Block } );
     }
+    private void Backup( MessageEventArgs e, IEnumerable<string> args )
+    {
+      //https://developers.google.com/drive/v3/web/quickstart/dotnet
+    }
     private async Task<bool> ExecuteCommand( MessageEventArgs e, string command, string[] args )
     {
       //Aus dieser forEach can ich nicht raus breaken :(
@@ -295,7 +311,7 @@ namespace NerdyBot
 
     private void LogHandler( object sender, LogMessageEventArgs e )
     {
-      Console.WriteLine( e.Message );
+      Console.WriteLine( "{0}: {1}", e.Source, e.Message );
     }
 
     public void Start()
@@ -337,8 +353,7 @@ namespace NerdyBot
         {
           //Externe Prozesse sind böse, aber der kann so viel :S
           //Ich könne allerdings auf die ganzen features verzichten und nen reinen yt dl anbieten
-          //https://github.com/flagbug/YoutubeExtractor <-- aber schon alt :S
-          //https://github.com/jamesqo/libvideo <-- kann kein audio?
+          //https://github.com/flagbug/YoutubeExtractor
           string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp.%(ext)s" );
           ProcessStartInfo ytdl = new System.Diagnostics.ProcessStartInfo();
           ytdl.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
@@ -366,7 +381,7 @@ namespace NerdyBot
       Channel vChannel = this.client.Servers.First().VoiceChannels.FirstOrDefault( vc => vc.Id == channelId );
       lock ( playing )
       {
-        IAudioClient vClient = audio.Join( vChannel ).Result;
+        IAudioClient vClient = this.audio.Join( vChannel ).Result;
         Log( "playing " + Path.GetDirectoryName( localPath ) );
         try
         {
@@ -450,6 +465,21 @@ namespace NerdyBot
         break;
       }
     }
+
+    public void Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info )
+    {
+      this.client.Log.Log( logLevel, source, text );
+    }
+    #endregion
+
+    private readonly int chunkSize = 1990;
+    private IEnumerable<string> ChunkMessage( string str )
+    {
+      if ( str.Length > chunkSize )
+        return Enumerable.Range( 0, str.Length / chunkSize )
+          .Select( i => str.Substring( i * chunkSize, chunkSize ) );
+      return new string[] { str };
+    }
     private string FormatMessage( string message, MessageType format, string highlight )
     {
       string formatedMessage = string.Empty;
@@ -467,21 +497,6 @@ namespace NerdyBot
         break;
       }
       return formatedMessage;
-    }
-
-    public void Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info )
-    {
-      this.client.Log.Log( logLevel, source, text );
-    }
-    #endregion
-
-    private readonly int chunkSize = 1990;
-    private IEnumerable<string> ChunkMessage( string str )
-    {
-      if ( str.Length > chunkSize )
-        return Enumerable.Range( 0, str.Length / chunkSize )
-          .Select( i => str.Substring( i * chunkSize, chunkSize ) );
-      return new string[] { str };
     }
 
     private void ConvertAudio( string inFile, string outFile )
