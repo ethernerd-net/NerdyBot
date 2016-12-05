@@ -13,10 +13,10 @@ using Discord.Commands;
 
 using CSCore;
 using CSCore.Codecs;
-using CSCore.MediaFoundation;
 
 using NerdyBot.Contracts;
 using System.Threading.Tasks;
+using NAudio.Wave;
 
 namespace NerdyBot
 {
@@ -46,7 +46,7 @@ namespace NerdyBot
         x.PrefixChar = conf.Prefix;
         x.AllowMentionPrefix = true;
       } );
-      
+
       client.UsingAudio( x =>
       {
         x.Mode = AudioMode.Outgoing;
@@ -311,7 +311,6 @@ namespace NerdyBot
        } );
     }
 
-
     #region IClient
     public bool StopPlaying { get; set; }
     public void DownloadAudio( string url, string outp )
@@ -370,20 +369,26 @@ namespace NerdyBot
         Log( "playing " + Path.GetDirectoryName( localPath ) );
         try
         {
-          IWaveSource source = CodecFactory.Instance.GetCodec( localPath );
-          source = source.ChangeSampleRate( 48000 ); //Audio plays too fast if not 48k
-          using ( source )
+          var channelCount = this.audio.Config.Channels; // Get the number of AudioChannels our AudioService has been configured to use.
+          var OutFormat = new NAudio.Wave.WaveFormat( 48000, 16, channelCount ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
+          using ( var MP3Reader = new Mp3FileReader( localPath ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
+          using ( var resampler = new MediaFoundationResampler( MP3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
           {
-            byte[] buffer = new byte[source.WaveFormat.BytesPerSecond];
-            int read;
-            while ( ( read = source.Read( buffer, 0, buffer.Length ) ) > 0 && !StopPlaying )
-            {
-              vClient.Send( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, read ); // Send the buffer to Discord
+            resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
+            int blockSize = OutFormat.AverageBytesPerSecond / 50; // Establish the size of our AudioBuffer
+            byte[] buffer = new byte[blockSize];
+            int byteCount;
 
-              Console.CursorLeft = 0;
-              Console.Write( "{0:P}/{1:P}", ( double )source.Position / source.Length, 1 );
+            while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && !StopPlaying ) // Read audio into our buffer, and keep a loop open while data is present
+            {
+              if ( byteCount < blockSize )
+              {
+                // Incomplete Frame
+                for ( int i = byteCount; i < blockSize; i++ )
+                  buffer[i] = 0;
+              }
+              vClient.Send( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
             }
-            Console.WriteLine();
           }
           vClient.Wait();
         }
@@ -489,7 +494,7 @@ namespace NerdyBot
       Log( "converting: " + Path.GetFileName( outFile ) );
       using ( IWaveSource source = CodecFactory.Instance.GetCodec( inFile ) )
       {
-        using ( var encoder = MediaFoundationEncoder.CreateMP3Encoder( source.WaveFormat, outFile ) )
+        using ( var encoder = CSCore.MediaFoundation.MediaFoundationEncoder.CreateMP3Encoder( source.WaveFormat, outFile ) )
         {
           byte[] buffer = new byte[source.WaveFormat.BytesPerSecond];
           int read;
