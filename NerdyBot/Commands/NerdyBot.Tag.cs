@@ -392,7 +392,7 @@ namespace NerdyBot.Commands
     }
     private void AddSoundToTag( Tag tag, string[] args )
     {
-      string path = Path.Combine( "sounds", tag.Name );
+      string path = Path.Combine( this.conf.Key, tag.Name );
       Directory.CreateDirectory( path );
       int listCount = tag.Entries.Count;
 
