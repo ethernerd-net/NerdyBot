@@ -19,6 +19,8 @@ namespace NerdyBot.Commands.Config
     public IEnumerable<string> Aliases { get; private set; }
     public List<ulong> RestrictedRoles { get; private set; }
     public RestrictType RestrictionType { get; set; }
+    public string ApiKey { get; set; }
+    public long Hits { get; set; }
 
     protected override dynamic Parse( string json )
     {

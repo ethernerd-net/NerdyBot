@@ -40,8 +40,8 @@ namespace NerdyBot.Commands
         {
            var youtubeService = new YouTubeService( new BaseClientService.Initializer()
           {
-            ApiKey = "AIzaSyAmrg8abuMO0esvieSZCdduxqog815QRnY",
-            ApplicationName = this.GetType().ToString()
+            ApiKey = this.conf.ApiKey,
+            ApplicationName = "NerdyBot"
           } );
 
           var searchListRequest = youtubeService.Search.List( "snippet" );

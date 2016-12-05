@@ -26,6 +26,7 @@ namespace NerdyBot.Commands
     public void Init( IClient client )
     {
       this.conf = new BaseCommandConfig( DEFAULTKEY, DEFAULTALIASES );
+      this.conf.Read();
       this.client = client;
     }
 

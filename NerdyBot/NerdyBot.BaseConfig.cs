@@ -24,6 +24,8 @@ namespace NerdyBot
     {
       if ( File.Exists( filePath ) )
         Assign( Parse( File.ReadAllText( this.filePath ) ) );
+      else
+        Write();
     }
 
     protected abstract dynamic Parse( string json );
