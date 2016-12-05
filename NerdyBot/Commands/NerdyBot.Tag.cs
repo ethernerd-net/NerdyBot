@@ -72,7 +72,9 @@ namespace NerdyBot.Commands
         case "info":
         case "raw":
         default:
-          string tagName = subArgs.First().ToLower();
+          string tagName = msg.Arguments.First().ToLower();
+          if ( msg.Arguments.Count() > 1 )
+            tagName = subArgs.First().ToLower();
           var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName );
           if ( tag != null )
           {
