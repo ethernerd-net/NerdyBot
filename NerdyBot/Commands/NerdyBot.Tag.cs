@@ -307,7 +307,7 @@ namespace NerdyBot.Commands
     private void Delete( Tag tag )
     {
       if ( tag.Type == TagType.Sound )
-        Directory.Delete( Path.Combine( "sounds", tag.Name ), true );
+        Directory.Delete( Path.Combine( "tag", tag.Name ), true );
 
       this.conf.Ext.Tags.Remove( tag );
       this.conf.Write();
