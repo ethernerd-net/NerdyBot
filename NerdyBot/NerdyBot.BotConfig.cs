@@ -11,6 +11,7 @@ namespace NerdyBot
 
     public string Token { get; set; }
     public char Prefix { get; set; }
+    public string BackUpApiKey { get; set; }
     public ulong ResponseChannel { get; set; }
 
     protected override dynamic Parse( string json )

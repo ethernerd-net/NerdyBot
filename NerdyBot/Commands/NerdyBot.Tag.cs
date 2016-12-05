@@ -359,7 +359,7 @@ namespace NerdyBot.Commands
         if ( msg.User.VoiceChannelId != 0 )
         {
           this.client.StopPlaying = false;
-          string path = Path.Combine( "sounds", tag.Name, idx + ".mp3" );
+          string path = Path.Combine( this.conf.Key, tag.Name, idx + ".mp3" );
           if ( !File.Exists( path ) )
             this.client.DownloadAudio( tag.Entries[idx], path );
           this.client.SendAudio( msg.User.VoiceChannelId, path, tag.Volume / 100f );

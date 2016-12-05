@@ -16,6 +16,7 @@ using CSCore.Codecs;
 using CSCore.MediaFoundation;
 
 using NerdyBot.Contracts;
+using System.Threading.Tasks;
 
 namespace NerdyBot
 {
@@ -149,6 +150,7 @@ namespace NerdyBot
       svc.CreateCommand( "backup" )
         .Do( e =>
         {
+          Backup( e );
           e.Message.Delete();
         } );
     }
@@ -285,9 +287,12 @@ namespace NerdyBot
       }
       SendMessage( sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = e.User.Id, Split = true, MessageType = MessageType.Block } );
     }
-    private void Backup( CommandEventArgs e, IEnumerable<string> args )
+    private void Backup( CommandEventArgs e )
     {
-      //https://developers.google.com/drive/v3/web/quickstart/dotnet
+      Task.Factory.StartNew( () =>
+      {
+        e.User.SendMessage( "not implemented" );
+      } );
     }
     #endregion MainCommands
 
