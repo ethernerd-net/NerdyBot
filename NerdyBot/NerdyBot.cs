@@ -97,7 +97,6 @@ namespace NerdyBot
                     Name = e.User.Name,
                     FullName = e.User.ToString(),
                     Mention = e.User.Mention,
-                    VoiceChannelId = e.User.VoiceChannel == null ? 0 : e.User.VoiceChannel.Id,
                     Permissions = e.User.ServerPermissions
                   }
                 } );
@@ -360,45 +359,49 @@ namespace NerdyBot
         throw new ArgumentException( ex.Message );
       }
     }
-    public void SendAudio( ulong channelId, string localPath, float volume = 1f, bool delAfterPlay = false )
+    public void SendAudio( ICommandUser user, string localPath, float volume = 1f, bool delAfterPlay = false )
     {
-      Channel vChannel = this.client.Servers.First().VoiceChannels.FirstOrDefault( vc => vc.Id == channelId );
-      lock ( playing )
+      var vUser = this.client.Servers.First().Users.FirstOrDefault( u => u.Id == user.Id );
+      if ( vUser != null && vUser.VoiceChannel.Id != 0 )
       {
-        IAudioClient vClient = this.audio.Join( vChannel ).Result;
-        Log( "playing " + Path.GetDirectoryName( localPath ) );
-        try
+        var vChannel = this.client.Servers.First().VoiceChannels.FirstOrDefault( vc => vc.Id == vUser.VoiceChannel.Id );
+        lock ( playing )
         {
-          var channelCount = this.audio.Config.Channels; // Get the number of AudioChannels our AudioService has been configured to use.
-          var OutFormat = new NAudio.Wave.WaveFormat( 48000, 16, channelCount ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
-          using ( var MP3Reader = new Mp3FileReader( localPath ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
-          using ( var resampler = new MediaFoundationResampler( MP3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
+          IAudioClient vClient = this.audio.Join( vChannel ).Result;
+          Log( "playing " + Path.GetDirectoryName( localPath ), vUser.ToString() );
+          try
           {
-            resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
-            int blockSize = OutFormat.AverageBytesPerSecond / 50; // Establish the size of our AudioBuffer
-            byte[] buffer = new byte[blockSize];
-            int byteCount;
-
-            while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && !StopPlaying ) // Read audio into our buffer, and keep a loop open while data is present
+            var channelCount = this.audio.Config.Channels; // Get the number of AudioChannels our AudioService has been configured to use.
+            var OutFormat = new NAudio.Wave.WaveFormat( 48000, 16, channelCount ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
+            using ( var MP3Reader = new Mp3FileReader( localPath ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
+            using ( var resampler = new MediaFoundationResampler( MP3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
             {
-              if ( byteCount < blockSize )
+              resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
+              int blockSize = OutFormat.AverageBytesPerSecond / 50; // Establish the size of our AudioBuffer
+              byte[] buffer = new byte[blockSize];
+              int byteCount;
+
+              while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && !StopPlaying ) // Read audio into our buffer, and keep a loop open while data is present
               {
-                // Incomplete Frame
-                for ( int i = byteCount; i < blockSize; i++ )
-                  buffer[i] = 0;
+                if ( byteCount < blockSize )
+                {
+                  // Incomplete Frame
+                  for ( int i = byteCount; i < blockSize; i++ )
+                    buffer[i] = 0;
+                }
+                vClient.Send( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
               }
-              vClient.Send( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
             }
+            vClient.Wait();
           }
-          vClient.Wait();
+          catch ( Exception )
+          {
+            Console.WriteLine( "Format not supported." );
+          }
+          StopPlaying = false;
+          if ( delAfterPlay )
+            File.Delete( localPath );
         }
-        catch ( Exception )
-        {
-          Console.WriteLine( "Format not supported." );
-        }
-        StopPlaying = false;
-        if ( delAfterPlay )
-          File.Delete( localPath );
       }
     }
 

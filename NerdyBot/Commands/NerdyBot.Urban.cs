@@ -37,31 +37,25 @@ namespace NerdyBot.Commands
             new SendMessageOptions() { TargetType = TargetType.User, TargetId = msg.User.Id, MessageType = MessageType.Block } );
         else if ( msg.Arguments.Length > 1 && msg.Arguments[0] == "sound" )
         {
-          if ( msg.User.VoiceChannelId != 0 )
+          string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", msg.Arguments.Skip( 1 ) ) );
+          var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
+          if ( urban.sounds != null && urban.sounds.Count() > 0 )
           {
-            string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", msg.Arguments.Skip( 1 ) ) );
-            var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
-            if ( urban.sounds != null && urban.sounds.Count() > 0 )
+            string soundUrl = urban.sounds.First();
+            if ( soundUrl.EndsWith( ".mp3" ) )
             {
-              string soundUrl = urban.sounds.First();
-              if ( soundUrl.EndsWith( ".mp3" ) )
-              {
-                client.StopPlaying = false;
-                string path = Path.Combine( "urban", string.Join( " ", msg.Arguments.Skip( 1 ) ) + ".mp3" );
-                if ( !File.Exists( path ) )
-                  client.DownloadAudio( urban.sounds.First(), path );
-                client.SendAudio( msg.User.VoiceChannelId, path );
-              }
-              else
-                this.client.SendMessage( "404, Urban not found!",
-                  new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
+              client.StopPlaying = false;
+              string path = Path.Combine( "urban", string.Join( " ", msg.Arguments.Skip( 1 ) ) + ".mp3" );
+              if ( !File.Exists( path ) )
+                client.DownloadAudio( urban.sounds.First(), path );
+              client.SendAudio( msg.User, path );
             }
             else
               this.client.SendMessage( "404, Urban not found!",
                 new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
           }
           else
-            this.client.SendMessage( "In einen Voicechannel du musst!",
+            this.client.SendMessage( "404, Urban not found!",
               new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Info } );
         }
         else

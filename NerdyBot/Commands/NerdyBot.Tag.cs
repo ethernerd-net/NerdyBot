@@ -358,14 +358,11 @@ namespace NerdyBot.Commands
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = msg.Channel.Id, MessageType = MessageType.Block } );
         break;
       case TagType.Sound:
-        if ( msg.User.VoiceChannelId != 0 )
-        {
-          this.client.StopPlaying = false;
-          string path = Path.Combine( this.conf.Key, tag.Name, idx + ".mp3" );
-          if ( !File.Exists( path ) )
-            this.client.DownloadAudio( tag.Entries[idx], path );
-          this.client.SendAudio( msg.User.VoiceChannelId, path, tag.Volume / 100f );
-        }
+        this.client.StopPlaying = false;
+        string path = Path.Combine( this.conf.Key, tag.Name, idx + ".mp3" );
+        if ( !File.Exists( path ) )
+          this.client.DownloadAudio( tag.Entries[idx], path );
+        this.client.SendAudio( msg.User, path, tag.Volume / 100f );
         break;
       case TagType.Url:
         this.client.SendMessage( tag.Entries[idx],

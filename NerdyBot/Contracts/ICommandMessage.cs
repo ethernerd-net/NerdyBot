@@ -15,7 +15,6 @@ namespace NerdyBot.Contracts
     string Name { get; }
     string FullName { get; }
     string Mention { get; }
-    ulong VoiceChannelId { get; }
     ServerPermissions Permissions { get; }
   }
   interface ICommandChannel

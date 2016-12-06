@@ -16,7 +16,6 @@ namespace NerdyBot
     public string Name { get; set; }
     public string FullName { get; set; }
     public string Mention { get; set; }
-    public ulong VoiceChannelId { get; set; }
     public ServerPermissions Permissions { get; set; }
   }
   class CommandChannel : ICommandChannel

@@ -8,7 +8,7 @@ namespace NerdyBot.Contracts
     void SendMessage( string message, SendMessageOptions options );
 
     void DownloadAudio( string url, string outp );
-    void SendAudio( ulong channelId, string localPath, float volume = 1f, bool delAfterPlay = false );
+    void SendAudio( ICommandUser user, string localPath, float volume = 1f, bool delAfterPlay = false );
     bool StopPlaying { get; set; }
   }
 
