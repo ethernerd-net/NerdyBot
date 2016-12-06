@@ -11,9 +11,6 @@ using Discord;
 using Discord.Audio;
 using Discord.Commands;
 
-using CSCore;
-using CSCore.Codecs;
-
 using NerdyBot.Contracts;
 using System.Threading.Tasks;
 using NAudio.Wave;
@@ -52,10 +49,9 @@ namespace NerdyBot
         x.Mode = AudioMode.Outgoing;
       } );
       this.audio = client.GetService<AudioService>();
-      CodecFactory.Instance.Register( "ogg-vorbis", new CodecFactoryEntry( s => new NVorbisSource( s ).ToWaveSource(), ".ogg" ) );
     }
 
-    private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "leave", "join", "backup" };
+    private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "purge", "leave", "join", "backup" };
 
     private List<ICommand> commands = new List<ICommand>();
     private void InitCommands()
@@ -121,10 +117,23 @@ namespace NerdyBot
         } );
       svc.CreateCommand( "perm" )
         .Parameter( "args", ParameterType.Multiple )
+        .AddCheck( ( cmd, u, ch ) => u.ServerPermissions.Administrator )
         .Do( e =>
         {
           RestrictCommandByRole( e, e.Args );
           e.Message.Delete();
+        } );
+      svc.CreateCommand( "purge" )
+        .Parameter( "count", ParameterType.Required )
+        .AddCheck( ( cmd, u, ch ) => u.ServerPermissions.Administrator )
+        .Do( async e =>
+        {
+          int count;
+          if ( int.TryParse( e.GetArg( "count" ), out count ) )
+          {
+            var msgs = await e.Channel.DownloadMessages( count );
+            e.Channel.DeleteMessages( msgs );
+          }
         } );
       svc.CreateCommand( "stop" )
         .Do( e =>
@@ -147,6 +156,7 @@ namespace NerdyBot
           e.Message.Delete();
         } );
       svc.CreateCommand( "backup" )
+        .AddCheck( ( cmd, u, ch ) => u.ServerPermissions.Administrator )
         .Do( e =>
         {
           Backup( e );
@@ -194,74 +204,69 @@ namespace NerdyBot
     private void RestrictCommandByRole( CommandEventArgs e, string[] args )
     {
       string info = string.Empty;
-      if ( e.User.ServerPermissions.Administrator )
+      string option = args.First().ToLower();
+      switch ( option )
       {
-        string option = args.First().ToLower();
-        switch ( option )
+      case "add":
+      case "rem":
+        if ( args.Count() != 3 )
+          info = "Äh? Ich glaube die Parameteranzahl stimmt so nicht!";
+        else
         {
-        case "add":
-        case "rem":
-          if ( args.Count() != 3 )
-            info = "Äh? Ich glaube die Parameteranzahl stimmt so nicht!";
+          var role = e.Server.Roles.FirstOrDefault( r => r.Name == args[1] );
+          var cmd = this.commands.FirstOrDefault( c => c.Config.Key == args[2] );
+          if ( cmd == null )
+            info = "Command nicht gefunden!";
           else
           {
-            var role = e.Server.Roles.FirstOrDefault( r => r.Name == args[1] );
-            var cmd = this.commands.FirstOrDefault( c => c.Config.Key == args[2] );
-            if ( cmd == null )
-              info = "Command nicht gefunden!";
+            if ( cmd.Config.RestrictedRoles.Contains( role.Id ) )
+            {
+              if ( option == "rem" )
+                cmd.Config.RestrictedRoles.Remove( role.Id );
+            }
             else
             {
-              if ( cmd.Config.RestrictedRoles.Contains( role.Id ) )
-              {
-                if ( option == "rem" )
-                  cmd.Config.RestrictedRoles.Remove( role.Id );
-              }
-              else
-              {
-                if ( option == "add" )
-                  cmd.Config.RestrictedRoles.Add( role.Id );
-              }
-              info = "Permissions updated for " + cmd.Config.Key;
-            }
-          }
-          break;
-        case "type":
-          if ( args.Count() != 3 )
-            info = "Äh? Ich glaube die Parameteranzahl stimmt so nicht!";
-          else
-          {
-            var cmd = this.commands.FirstOrDefault( c => c.Config.Key == args[2] );
-            switch ( args[1].ToLower() )
-            {
-            case "admin":
-              cmd.Config.RestrictionType = Commands.Config.RestrictType.Admin;
-              break;
-            case "none":
-              cmd.Config.RestrictionType = Commands.Config.RestrictType.None;
-              break;
-            case "deny":
-              cmd.Config.RestrictionType = Commands.Config.RestrictType.Deny;
-              break;
-            case "allow":
-              cmd.Config.RestrictionType = Commands.Config.RestrictType.Allow;
-              break;
-            default:
-              SendMessage( args[1] + " ist ein invalider Parameter", new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = e.Channel.Id, MessageType = MessageType.Info } );
-              return;
+              if ( option == "add" )
+                cmd.Config.RestrictedRoles.Add( role.Id );
             }
             info = "Permissions updated for " + cmd.Config.Key;
           }
-          break;
-        case "help":
-          //TODO HELP
-          break;
-        default:
-          info = "Invalider Parameter!";
-          break;
         }
+        break;
+      case "type":
+        if ( args.Count() != 3 )
+          info = "Äh? Ich glaube die Parameteranzahl stimmt so nicht!";
+        else
+        {
+          var cmd = this.commands.FirstOrDefault( c => c.Config.Key == args[2] );
+          switch ( args[1].ToLower() )
+          {
+          case "admin":
+            cmd.Config.RestrictionType = Commands.Config.RestrictType.Admin;
+            break;
+          case "none":
+            cmd.Config.RestrictionType = Commands.Config.RestrictType.None;
+            break;
+          case "deny":
+            cmd.Config.RestrictionType = Commands.Config.RestrictType.Deny;
+            break;
+          case "allow":
+            cmd.Config.RestrictionType = Commands.Config.RestrictType.Allow;
+            break;
+          default:
+            SendMessage( args[1] + " ist ein invalider Parameter", new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = e.Channel.Id, MessageType = MessageType.Info } );
+            return;
+          }
+          info = "Permissions updated for " + cmd.Config.Key;
+        }
+        break;
+      case "help":
+        //TODO HELP
+        break;
+      default:
+        info = "Invalider Parameter!";
+        break;
       }
-      else
-        info = "Du bist zu unwichtig dafür!";
       SendMessage( info, new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = e.Channel.Id, MessageType = MessageType.Info } );
     }
     private void ShowHelp( CommandEventArgs e, IEnumerable<string> args )
@@ -338,20 +343,29 @@ namespace NerdyBot
           //Ich könne allerdings auf die ganzen features verzichten und nen reinen yt dl anbieten
           //https://github.com/flagbug/YoutubeExtractor
           string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp.%(ext)s" );
-          ProcessStartInfo ytdl = new System.Diagnostics.ProcessStartInfo();
-          ytdl.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+          ProcessStartInfo ytdl = new ProcessStartInfo();
+          ytdl.WindowStyle = ProcessWindowStyle.Hidden;
           ytdl.FileName = "ext\\youtube-dl.exe";
 
           ytdl.Arguments = "--extract-audio --audio-quality 0 --no-playlist --output \"" + tempOut + "\" \"" + url + "\"";
           Process.Start( ytdl ).WaitForExit();
           transform = true;
         }
+        Log( "download complete" );
         if ( transform )
         {
           string tempFIle = Directory.GetFiles( Path.GetDirectoryName( outp ), "temp.*", SearchOption.TopDirectoryOnly ).First();
-          ConvertAudio( tempFIle, outp );
+          Log( "converting: " + Path.GetFileName( tempFIle ) );
+
+          ProcessStartInfo ffmpeg = new ProcessStartInfo();
+          ffmpeg.WindowStyle = ProcessWindowStyle.Hidden;
+          ffmpeg.FileName = "ext\\ffmpeg.exe";
+
+          ffmpeg.Arguments = "-i " + tempFIle + " -f mp3 " + outp;
+          Process.Start( ffmpeg ).WaitForExit();
 
           File.Delete( tempFIle );
+          Log( "conversion complete" );
         }
       }
       catch ( Exception ex )
@@ -490,23 +504,6 @@ namespace NerdyBot
         break;
       }
       return formatedMessage;
-    }
-
-    private void ConvertAudio( string inFile, string outFile )
-    {
-      Log( "converting: " + Path.GetFileName( outFile ) );
-      using ( IWaveSource source = CodecFactory.Instance.GetCodec( inFile ) )
-      {
-        using ( var encoder = CSCore.MediaFoundation.MediaFoundationEncoder.CreateMP3Encoder( source.WaveFormat, outFile ) )
-        {
-          byte[] buffer = new byte[source.WaveFormat.BytesPerSecond];
-          int read;
-          while ( ( read = source.Read( buffer, 0, buffer.Length ) ) > 0 )
-          {
-            encoder.Write( buffer, 0, read );
-          }
-        }
-      }
     }
   }
 }

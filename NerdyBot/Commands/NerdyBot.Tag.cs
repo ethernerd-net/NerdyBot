@@ -50,12 +50,23 @@ namespace NerdyBot.Commands
         {
         case "create":
           if ( msg.Arguments.Count() >= 4 )
-            response = Create( subArgs, msg.User.FullName );
+          {
+            string tn = subArgs.First().ToLower();
+            if ( IsValidName( tn ) )
+            {
+              if ( Create( subArgs, msg.User.FullName ) )
+                response = "Tag '" + tn + "' erstellt!";
+              else
+                response = "Fehler beim erstellen des tags (parameter oder code)";
+            }
+            else
+              response = "Tag '" + tn + "' existiert bereits oder ist reserviert!!";
+          }
           break;
 
         case "edit":
           if ( msg.Arguments.Count() >= 4 )
-            response = Edit( subArgs, msg.User.FullName, msg.User.Permissions );
+            Edit( subArgs, msg.User.FullName, msg.User.Permissions, out response );
           break;
 
         case "list":
@@ -172,15 +183,15 @@ namespace NerdyBot.Commands
     }
     #endregion ICommand
 
-    private string Create( string[] args, string author  )
+    private bool Create( string[] args, string author  )
     {
-      string response = string.Empty;
-      if ( !IsValidName( args[0].ToLower() ) )
-        response = "Tag '" + args[0] + "' existiert bereits oder ist reserviert!!";
-      else
+      bool response = true;
+      try
       {
+        string tagName = args.First().ToLower();
+        this.client.Log( "creating tag '" + tagName + "'", author );
         Tag tag = new Tag();
-        tag.Name = args[0].ToLower();
+        tag.Name = tagName;
         tag.Author = author;
         tag.CreateDate = DateTime.Now;
         tag.Count = 0;
@@ -204,17 +215,23 @@ namespace NerdyBot.Commands
           AddUrlToTag( tag, args.Skip( 2 ).ToArray() );
           break;
         default:
-          return args[1] + " ist ein invalider Parameter";
+          response = false;
+          break;
         }
         this.conf.Ext.Tags.Add( tag );
         this.conf.Write();
-        response = "Tag '" + tag.Name + "' erstellt!";
+        this.client.Log( "finished creation", author );
+      }
+      catch ( Exception ex )
+      {
+        this.client.Log( ex.Message, "Exception" );
+        response = false;
       }
       return response;
     }
-    private string Edit( string[] args, string author, ServerPermissions permissions )
+    private void Edit( string[] args, string author, ServerPermissions permissions, out string response )
     {
-      string response = string.Empty;
+      response = string.Empty;
       var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[0].ToLower() );
       if ( tag == null )
         response = "Tag '" + args[0] + "' existiert nicht!";
@@ -269,14 +286,14 @@ namespace NerdyBot.Commands
               response = "Die Lautstärke muss eine Zahl zwischen 0 und 101 sein!";
             break;
           default:
-            return "Die Option Name '" + args[2] + "' ist nicht valide!";
+            response = "Die Option Name '" + args[2] + "' ist nicht valide!";
+            break;
           }
           this.conf.Write();
         }
         else
           response = "Du bist zu unwichtig dafür!";
       }
-      return response;
     }
     private void List( ICommandChannel channel )
     {
