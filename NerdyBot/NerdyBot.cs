@@ -27,6 +27,9 @@ namespace NerdyBot
     private MainConfig conf;
     private const string MAINCFG = "cfg";
 
+    //User/Channel Workaround
+    private Dictionary<ulong, Channel> userChannels = new Dictionary<ulong, Channel>();
+
     public NerdyBot()
     {
       conf = new MainConfig( MAINCFG );
@@ -49,6 +52,15 @@ namespace NerdyBot
         x.Mode = AudioMode.Outgoing;
       } );
       this.audio = client.GetService<AudioService>();
+
+      //User/Channel Workaround
+      this.client.UserUpdated += Client_UserUpdated;
+    }
+
+    //User/Channel Workaround
+    private void Client_UserUpdated( object sender, UserUpdatedEventArgs e )
+    {
+      this.userChannels[e.After.Id] = e.After.VoiceChannel;
     }
 
     private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "purge", "leave", "join", "backup" };
@@ -376,12 +388,14 @@ namespace NerdyBot
     public void SendAudio( ICommandUser user, string localPath, float volume = 1f, bool delAfterPlay = false )
     {
       var vUser = this.client.Servers.First().Users.FirstOrDefault( u => u.Id == user.Id );
-      if ( vUser != null && vUser.VoiceChannel.Id != 0 )
+      
+      if ( vUser != null  && this.userChannels[user.Id] != null )
       {
-        var vChannel = this.client.Servers.First().VoiceChannels.FirstOrDefault( vc => vc.Id == vUser.VoiceChannel.Id );
+        //var vChannel = this.client.Servers.First().VoiceChannels.FirstOrDefault( vc => vc.Id == vUser.VoiceChannel.Id );
+        //var vChannel = this.client.Servers.First().VoiceChannels.Where( ch => ch.Users.Any( u => u.Id == user.Id ) ).First();
         lock ( playing )
         {
-          IAudioClient vClient = this.audio.Join( vChannel ).Result;
+          IAudioClient vClient = this.audio.Join( this.userChannels[user.Id] ).Result;
           Log( "playing " + Path.GetDirectoryName( localPath ), vUser.ToString() );
           try
           {
