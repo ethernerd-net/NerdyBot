@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 
-using NerdyBot.Commands.Config;
+using NerdyBot.Config;
 using NerdyBot.Contracts;
 using Discord.Commands;
 

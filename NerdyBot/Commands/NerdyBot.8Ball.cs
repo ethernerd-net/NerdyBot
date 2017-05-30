@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Discord.Commands;
 
 using NerdyBot.Contracts;
-using NerdyBot.Commands.Config;
+using NerdyBot.Config;
 
 namespace NerdyBot.Commands
 {
