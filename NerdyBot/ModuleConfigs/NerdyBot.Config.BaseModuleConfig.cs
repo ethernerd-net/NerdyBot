@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace NerdyBot.Config
 {
-  public class BaseCommandConfig : BaseConfig
+  public class BaseModuleConfig : BaseConfig
   {
-    public BaseCommandConfig( string defaultKey/*, IEnumerable<string> aliases = null*/ )
+    public BaseModuleConfig( string defaultKey/*, IEnumerable<string> aliases = null*/ )
       :base( defaultKey )
     {      
       this.Key = defaultKey;
@@ -23,7 +23,7 @@ namespace NerdyBot.Config
 
     protected override dynamic Parse( string json )
     {
-      return JsonConvert.DeserializeObject<BaseCommandConfig>( json );
+      return JsonConvert.DeserializeObject<BaseModuleConfig>( json );
     }
     protected override void Assign( dynamic conf )
     {

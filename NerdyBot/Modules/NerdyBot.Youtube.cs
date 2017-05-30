@@ -14,13 +14,13 @@ namespace NerdyBot.Commands
   [Group( "youtube" ), Alias( "yt" )]
   public class YoutubeCommand : ModuleBase
   {
-    private BaseCommandConfig conf;
+    private BaseModuleConfig conf;
 
     public MessageService MessageService { get; set; }
     
     public YoutubeCommand()
     {
-      this.conf = new BaseCommandConfig( "youtube" );
+      this.conf = new BaseModuleConfig( "youtube" );
       this.conf.Read();
     }
 

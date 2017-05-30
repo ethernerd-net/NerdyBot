@@ -15,11 +15,11 @@ namespace NerdyBot.Commands
   {
     public MessageService MessageService { get; set; }
 
-    private CommandConfig<Ball8Config> conf;
+    private ModuleConfig<Ball8Config> conf;
 
     public Ball8()
     {
-      this.conf = new CommandConfig<Ball8Config>( "8ball" );
+      this.conf = new ModuleConfig<Ball8Config>( "8ball" );
       this.conf.Read();
     }
 

@@ -2,9 +2,9 @@
 
 namespace NerdyBot.Config
 {
-  public class CommandConfig<T> : BaseCommandConfig where T : new()
+  public class ModuleConfig<T> : BaseModuleConfig where T : new()
   {
-    public CommandConfig( string key/*, IEnumerable<string> aliases*/ )
+    public ModuleConfig( string key/*, IEnumerable<string> aliases*/ )
       : base( key/*, aliases*/ )
     {
       this.Ext = new T();
@@ -14,11 +14,11 @@ namespace NerdyBot.Config
 
     protected override dynamic Parse( string json )
     {
-      return JsonConvert.DeserializeObject<CommandConfig<T>>( json );
+      return JsonConvert.DeserializeObject<ModuleConfig<T>>( json );
     }
     protected override void Assign( dynamic conf )
     {
-      base.Assign( conf as BaseCommandConfig );
+      base.Assign( conf as BaseModuleConfig );
       this.Ext = conf.Ext;
     }
   }
