@@ -12,7 +12,7 @@ namespace NerdyBot.Contracts
     bool StopPlaying { get; set; }
   }
 
-  class SendMessageOptions
+  public class SendMessageOptions
   {
     public SendMessageOptions()
     {
@@ -30,6 +30,6 @@ namespace NerdyBot.Contracts
     public MessageType MessageType { get; set; }
     public string Hightlight { get; set; }
   }
-  enum TargetType { User = 0, Channel = 1, Default = 2 }
-  enum MessageType { Block, Info, Normal }
+  public enum TargetType { User = 0, Channel = 1, Default = 2 }
+  public enum MessageType { Block, Info, Normal }
 }

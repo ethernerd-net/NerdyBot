@@ -15,7 +15,7 @@ namespace NerdyBot.Contracts
     string Name { get; }
     string FullName { get; }
     string Mention { get; }
-    ServerPermissions Permissions { get; }
+    //ServerPermissions Permissions { get; }
   }
   interface ICommandChannel
   {

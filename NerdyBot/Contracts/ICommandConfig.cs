@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 namespace NerdyBot.Contracts
 {
-  interface ICommandConfig
+  public interface ICommandConfig
   {
-    string Key { get; }
-    IEnumerable<string> Aliases { get; }
+    //string Key { get; }
+    //IEnumerable<string> Aliases { get; }
     List<ulong> RestrictedRoles { get; }
     RestrictType RestrictionType { get; set; }
   }

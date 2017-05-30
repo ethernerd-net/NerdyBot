@@ -1,19 +1,8 @@
-﻿using System;
-
-namespace NerdyBot
+﻿namespace NerdyBot
 {
   class Program
   {
     static void Main( string[] args )
-    {
-      try
-      {
-        ( new NerdyBot() ).Start();
-      }
-      catch ( Exception )
-      {
-        //ja
-      }
-    }
+      => new NerdyBot().Start().GetAwaiter().GetResult();
   }
 }

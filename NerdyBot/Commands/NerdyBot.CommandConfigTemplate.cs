@@ -5,8 +5,8 @@ namespace NerdyBot.Commands.Config
 {
   public class CommandConfig<T> : BaseCommandConfig where T : new()
   {
-    public CommandConfig( string key, IEnumerable<string> aliases )
-      : base( key, aliases )
+    public CommandConfig( string key/*, IEnumerable<string> aliases*/ )
+      : base( key/*, aliases*/ )
     {
       this.Ext = new T();
     }

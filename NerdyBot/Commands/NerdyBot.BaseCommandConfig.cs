@@ -6,17 +6,17 @@ namespace NerdyBot.Commands.Config
 {
   public class BaseCommandConfig : BaseConfig, ICommandConfig
   {
-    public BaseCommandConfig( string defaultKey, IEnumerable<string> aliases = null )
+    public BaseCommandConfig( string defaultKey/*, IEnumerable<string> aliases = null*/ )
       :base( defaultKey )
     {      
       this.Key = defaultKey;
-      this.Aliases = aliases ?? new List<string>();
+      //this.Aliases = aliases ?? new List<string>();
       this.RestrictedRoles = new List<ulong>();
       this.RestrictionType = RestrictType.None;
     }
 
     public string Key { get; set; }
-    public IEnumerable<string> Aliases { get; set; }
+    //public IEnumerable<string> Aliases { get; set; }
     public List<ulong> RestrictedRoles { get; set; }
     public RestrictType RestrictionType { get; set; }
     public string ApiKey { get; set; }
@@ -29,7 +29,7 @@ namespace NerdyBot.Commands.Config
     protected override void Assign( dynamic conf )
     {
       this.Key = conf.Key;
-      this.Aliases = conf.Aliases;
+      //this.Aliases = conf.Aliases;
       this.RestrictedRoles = conf.RestrictedRoles;
       this.RestrictionType = conf.RestrictionType;
       this.ApiKey = conf.ApiKey;
