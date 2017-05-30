@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace NerdyBot
+namespace NerdyBot.Config
 {
   class MainConfig : BaseConfig
   {

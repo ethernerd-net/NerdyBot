@@ -1,48 +1,51 @@
 ﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Text;
+using System.Threading.Tasks;
+
+using Discord.Commands;
 
 using NerdyBot.Contracts;
 using NerdyBot.Commands.Config;
-using Discord.Commands;
 
 namespace NerdyBot.Commands
 {
-  class Ball8 : ModuleBase
+  [Group( "8ball" ), Alias( "8b" )]
+  public class Ball8 : ModuleBase
   {
-    private MessageService svcMessage;
+    public MessageService MessageService { get; set; }
+
     private CommandConfig<Ball8Config> conf;
 
-    #region ICommand
-    public ICommandConfig Config { get { return this.conf; } }
-
-    public Ball8( MessageService svcMessage )
+    public Ball8()
     {
       this.conf = new CommandConfig<Ball8Config>( "8ball" );
-      this.svcMessage = svcMessage;
+      this.conf.Read();
     }
 
-    [Command( "8ball" ), Alias( "8b" )]
-    public async Task Execute( params string[] args )
+    [Command( "add" )]
+    public async Task Add( params string[] content )
     {
-      if ( args[0] == "add" )
-      {
-        string answer = string.Join( " ", args.Skip( 1 ) );
-        this.conf.Ext.Items.Add( answer );
-        this.conf.Write();
-      }
-      else if ( args[0] == "help" )
-        this.svcMessage.SendMessage( Context, FullHelp(),
-          new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
-      else
-      {
-        int idx = ( new Random() ).Next( 0, this.conf.Ext.Items.Count() );
-        this.svcMessage.SendMessage( Context, Context.User.Mention + " asked: '" + string.Join( " ", args ) +
-          Environment.NewLine + Environment.NewLine +
-          "My answer is: " + this.conf.Ext.Items[idx],
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-      }
+      string answer = string.Join( " ", content );
+      this.conf.Ext.Items.Add( answer );
+      this.conf.Write();
+    }
+
+    [Command( "help" )]
+    public async Task Help()
+    {
+      MessageService.SendMessage( Context, FullHelp(),
+        new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
+    }
+
+    [Command()]
+    public async Task Execute( params string[] question )
+    {
+      int idx = ( new Random() ).Next( 0, this.conf.Ext.Items.Count() );
+      MessageService.SendMessage( Context, Context.User.Mention + " asked: '" + string.Join( " ", question ) +
+        Environment.NewLine + Environment.NewLine +
+        "My answer is: " + this.conf.Ext.Items[idx],
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
 
     public string QuickHelp()
@@ -63,6 +66,5 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Beispiel: 8ball [FRAGE]" );
       return sb.ToString();
     }
-    #endregion ICommand
   }
 }

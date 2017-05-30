@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
-using System.Collections.Generic;
 
-namespace NerdyBot.Commands.Config
+namespace NerdyBot.Config
 {
   public class CommandConfig<T> : BaseCommandConfig where T : new()
   {

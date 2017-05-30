@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace NerdyBot.Commands
+namespace NerdyBot.Config
 {
-  class Ball8Config
+  public class Ball8Config
   {
     public Ball8Config()
     {

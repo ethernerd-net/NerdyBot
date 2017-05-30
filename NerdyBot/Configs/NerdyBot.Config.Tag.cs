@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace NerdyBot.Commands.Config
+namespace NerdyBot.Config
 {
   public class TagConfig
   {

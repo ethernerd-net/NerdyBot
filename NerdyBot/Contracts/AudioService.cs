@@ -1,11 +1,13 @@
-﻿using Discord.Audio;
+﻿using System;
+using System.IO;
+using System.Net;
+using System.Linq;
+using System.Diagnostics;
+using System.Threading.Tasks;
+
+using Discord.Audio;
 using Discord.Commands;
 using NAudio.Wave;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
 
 namespace NerdyBot.Contracts
 {
@@ -16,61 +18,64 @@ namespace NerdyBot.Contracts
     private object playing = new object();
 
     public bool StopPlaying { get; set; }
-    public void DownloadAudio( string url, string outp )
+    public Task DownloadAudio( string url, string outp )
     {
-      try
+      return Task.Run( () =>
       {
-        bool transform = false;
-        string ext = Path.GetExtension( url );
-        //Log( "downloading " + url );
-        if ( ext != string.Empty )
+        try
         {
-          string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp" + ext );
-          if ( ext == ".mp3" )
-            tempOut = outp;
+          bool transform = false;
+          string ext = Path.GetExtension( url );
+          //Log( "downloading " + url );
+          if ( ext != string.Empty )
+          {
+            string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp" + ext );
+            if ( ext == ".mp3" )
+              tempOut = outp;
 
-          if ( !Directory.Exists( Path.GetDirectoryName( tempOut ) ) )
-            Directory.CreateDirectory( Path.GetDirectoryName( tempOut ) );
+            if ( !Directory.Exists( Path.GetDirectoryName( tempOut ) ) )
+              Directory.CreateDirectory( Path.GetDirectoryName( tempOut ) );
 
-          ( new WebClient() ).DownloadFile( url, tempOut );
+            ( new WebClient() ).DownloadFile( url, tempOut );
 
-          transform = ( ext != ".mp3" );
+            transform = ( ext != ".mp3" );
+          }
+          else
+          {
+            //Externe Prozesse sind böse, aber der kann so viel :S
+            //Ich könne allerdings auf die ganzen features verzichten und nen reinen yt dl anbieten
+            //https://github.com/flagbug/YoutubeExtractor
+            string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp.%(ext)s" );
+            ProcessStartInfo ytdl = new ProcessStartInfo();
+            ytdl.WindowStyle = ProcessWindowStyle.Hidden;
+            ytdl.FileName = "ext\\youtube-dl.exe";
+
+            ytdl.Arguments = "--extract-audio --audio-quality 0 --no-playlist --output \"" + tempOut + "\" \"" + url + "\"";
+            Process.Start( ytdl ).WaitForExit();
+            transform = true;
+          }
+          //Log( "download complete" );
+          if ( transform )
+          {
+            string tempFIle = Directory.GetFiles( Path.GetDirectoryName( outp ), "temp.*", SearchOption.TopDirectoryOnly ).First();
+            //Log( "converting: " + Path.GetFileName( tempFIle ) );
+
+            ProcessStartInfo ffmpeg = new ProcessStartInfo();
+            ffmpeg.WindowStyle = ProcessWindowStyle.Hidden;
+            ffmpeg.FileName = "ext\\ffmpeg.exe";
+
+            ffmpeg.Arguments = "-i " + tempFIle + " -f mp3 " + outp;
+            Process.Start( ffmpeg ).WaitForExit();
+
+            File.Delete( tempFIle );
+            //Log( "conversion complete" );
+          }
         }
-        else
+        catch ( Exception ex )
         {
-          //Externe Prozesse sind böse, aber der kann so viel :S
-          //Ich könne allerdings auf die ganzen features verzichten und nen reinen yt dl anbieten
-          //https://github.com/flagbug/YoutubeExtractor
-          string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp.%(ext)s" );
-          ProcessStartInfo ytdl = new ProcessStartInfo();
-          ytdl.WindowStyle = ProcessWindowStyle.Hidden;
-          ytdl.FileName = "ext\\youtube-dl.exe";
-
-          ytdl.Arguments = "--extract-audio --audio-quality 0 --no-playlist --output \"" + tempOut + "\" \"" + url + "\"";
-          Process.Start( ytdl ).WaitForExit();
-          transform = true;
+          throw new ArgumentException( ex.Message );
         }
-        //Log( "download complete" );
-        if ( transform )
-        {
-          string tempFIle = Directory.GetFiles( Path.GetDirectoryName( outp ), "temp.*", SearchOption.TopDirectoryOnly ).First();
-          //Log( "converting: " + Path.GetFileName( tempFIle ) );
-
-          ProcessStartInfo ffmpeg = new ProcessStartInfo();
-          ffmpeg.WindowStyle = ProcessWindowStyle.Hidden;
-          ffmpeg.FileName = "ext\\ffmpeg.exe";
-
-          ffmpeg.Arguments = "-i " + tempFIle + " -f mp3 " + outp;
-          Process.Start( ffmpeg ).WaitForExit();
-
-          File.Delete( tempFIle );
-          //Log( "conversion complete" );
-        }
-      }
-      catch ( Exception ex )
-      {
-        throw new ArgumentException( ex.Message );
-      }
+      } );
     }
     public async void SendAudio( ICommandContext context, string localPath, float volume = 1f, bool delAfterPlay = false )
     {
@@ -88,20 +93,7 @@ namespace NerdyBot.Contracts
         {
           try
           {
-            /*var psi = new ProcessStartInfo
-            {
-              FileName = "ext\\ffmpeg",
-              Arguments = $"-i {localPath} -ac 2 -f s16le -ar 48000 pipe:1",
-              UseShellExecute = false,
-              RedirectStandardOutput = true,
-            };
-            var ffmpeg = Process.Start( psi );
-            var output = ffmpeg.StandardOutput.BaseStream;
-            var discord = audioClient.CreatePCMStream( AudioApplication.Mixed, 1920 );
-            output.CopyToAsync( discord ).GetAwaiter().GetResult();
-            discord.FlushAsync();*/
-
-            var discord = audioClient.CreatePCMStream( AudioApplication.Mixed, 1920 );
+            var discord = audioClient.CreatePCMStream( AudioApplication.Mixed );
             var OutFormat = new WaveFormat( 48000, 16, 2 ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
             using ( var MP3Reader = new Mp3FileReader( localPath ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
             using ( var resampler = new MediaFoundationResampler( MP3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
@@ -126,13 +118,18 @@ namespace NerdyBot.Contracts
           }
           catch ( Exception ex )
           {
-            Console.WriteLine( "Format not supported." );
+            Console.WriteLine( ex.Message );
           }
           StopPlaying = false;
           if ( delAfterPlay )
             File.Delete( localPath );
         }
       }
+    }
+    public async void LeaveChannel()
+    {
+      if ( this.audioClient != null )
+        await this.audioClient.StopAsync();
     }
   }
 }

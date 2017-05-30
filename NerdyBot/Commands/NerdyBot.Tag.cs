@@ -5,21 +5,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Discord;
 using Discord.Commands;
 
-using NerdyBot.Commands.Config;
+using NerdyBot.Config;
 using NerdyBot.Contracts;
-
 
 namespace NerdyBot.Commands
 {
+  [Group( "tag" ), Alias( "t" )]
   public class TagCommand : ModuleBase
   {
-    private AudioService svcAudio;
-    private MessageService svcMessage;
+    public AudioService AudioService { get; set; }
+    public MessageService MessageService { get; set; }
     private CommandConfig<TagConfig> conf;
-    
+
     private IEnumerable<string> KeyWords
     {
       get
@@ -28,106 +27,271 @@ namespace NerdyBot.Commands
       }
     }
 
-    #region ICommand
-    public ICommandConfig Config { get { return this.conf; } }
-
-    public TagCommand( AudioService svcAudio, MessageService svcMessage )
+    public TagCommand()
     {
       this.conf = new CommandConfig<TagConfig>( "tag" );
       this.conf.Read();
-      this.svcAudio = svcAudio;
-      this.svcMessage = svcMessage;
     }
 
-    [Command( "tag" ), Alias( "t" ), Summary( "Echos a message." )]
-    public async Task Execute( params string[] args )
+    [Command( "create" )]
+    public async Task Create( string tagName, TagType tagType, params string[] content )
     {
-      string response = "Invalid parameter count, check help for... guess what?";
-      var subArgs = args.Skip( 1 ).ToArray();
-      string option = args.First().ToLower();
-
-      switch ( option )
+      string author = Context.User.ToString();
+      try
       {
-      case "create":
-        if ( args.Count() >= 4 )
+        MessageService.Log( $"creating tag '{tagName.ToLower()}'", author );
+        Tag tag = new Tag();
+        tag.Name = tagName;
+        tag.Author = author;
+        tag.Type = tagType;
+        tag.CreateDate = DateTime.Now;
+        tag.Count = 0;
+        tag.Volume = 100;
+        tag.Entries = new List<string>();
+
+        switch ( tagType )
         {
-          string tn = subArgs.First().ToLower();
-          if ( IsValidName( tn ) )
-          {
-            if ( Create( subArgs, Context.User.Username ) )
-              response = "Tag '" + tn + "' erstellt!";
-            else
-              response = "Fehler beim erstellen des tags (parameter oder code)";
-          }
-          else
-            response = "Tag '" + tn + "' existiert bereits oder ist reserviert!!";
+        case TagType.Text:
+          AddTextToTag( tag, content );
+          break;
+
+        case TagType.Sound:
+          AddSoundToTag( tag, content );
+          break;
+
+        case TagType.Url:
+          AddUrlToTag( tag, content );
+          break;
+        default:
+          throw new ArgumentException( "WTF?!?!" );
         }
-        break;
+        this.conf.Ext.Tags.Add( tag );
+        this.conf.Write();
+        MessageService.Log( "finished creation", author );
+        MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich erstellt!",
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
+      }
+      catch ( Exception ex )
+      {
+        MessageService.Log( ex.Message, "Exception" );
+      }
+    }
 
-      case "edit":
-        if ( args.Count() >= 4 )
-          Edit( subArgs, Context.User.Username, out response );
-        break;
-
-      case "list":
-        List( Context.Channel );
-        response = string.Empty;
-        break;
-
-      case "help":
-        this.svcMessage.SendMessage( Context, FullHelp(),
-          new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = Contracts.MessageType.Block } );
-        break;
-
-      case "delete":
-      case "info":
-      case "raw":
-      default:
-        string tagName = args.First().ToLower();
-        if ( args.Count() > 1 )
-          tagName = subArgs.First().ToLower();
-        var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName );
-        if ( tag != null )
+    [Command( "edit" )]
+    public async Task Edit( string tagName, string editType, params string[] content )
+    {
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      if ( tag == null )
+        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
+      else
+      {
+        if ( tag.Author == Context.User.ToString() )
         {
-          switch ( option )
+          switch ( editType )
           {
-          case "delete":
-            if ( args.Count() == 2 )
+          case "add":
+            switch ( tag.Type )
             {
-              Delete( tag );
-              response = "Tag '" + tag.Name + "' delete!";
+            case TagType.Text:
+              AddTextToTag( tag, content );
+              break;
+            case TagType.Sound:
+              AddSoundToTag( tag, content );
+              break;
+            case TagType.Url:
+              AddUrlToTag( tag, content );
+              break;
+            default:
+              throw new ArgumentException( "WTF?!?!" );
             }
+            MessageService.SendMessage( Context, $"{content.Count()} Einträge zu '{tag.Name} hinzugefügt'!",
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
             break;
-          case "info":
-            if ( args.Count() >= 2 )
-            {
-              Info( tag, Context.Channel );
-              response = string.Empty;
-            }
+          case "remove":
+            int remCount = RemoveTagEntry( tag, content );
+            MessageService.SendMessage( Context, $"{remCount} / {content.Count()} removed",
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
             break;
-          case "raw":
-            if ( args.Count() >= 2 )
+          case "rename":
+            string newTagName = content[0].ToLower();
+            if ( IsValidName( newTagName ) )
             {
-              Raw( tag, Context.Channel );
-              response = string.Empty;
+              if ( tag.Type != Config.TagType.Text )
+              {
+                string dirName = tag.Type == Config.TagType.Sound ? "sounds" : "pics";
+                Directory.Move( Path.Combine( dirName, tag.Name ), Path.Combine( dirName, newTagName ) );
+              }
+              tag.Name = newTagName;
+              MessageService.SendMessage( Context, $"Tag umbenannt in '{tag.Name}'!",
+                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
             }
+            else
+              MessageService.SendMessage( Context, $"Tag '{newTagName}' existiert bereits oder ist reserviert!!",
+                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
+            break;
+          case "volume":
+            short vol;
+            if ( short.TryParse( content[0], out vol ) && vol > 0 && vol <= 100 )
+              tag.Volume = vol;
+            else
+              MessageService.SendMessage( Context, $"Die Lautstärke muss eine Zahl zwischen 0 und 101 sein!",
+                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
             break;
           default:
-            if ( args.Count() == 1 )
-            {
-              Send( tag );
-              response = string.Empty;
-            }
+            MessageService.SendMessage( Context, $"Die Option Name '{editType}' ist nicht valide!",
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
             break;
           }
+          this.conf.Write();
         }
         else
-          response = "Tag '" + tagName + "' existiert nicht!";
-        break;
+          MessageService.SendMessage( Context, $"Du bist zu unwichtig für diese Aktion",
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
       }
-      if ( response != string.Empty )
-        this.svcMessage.SendMessage( Context, response,
+    }
+
+    [Command( "list" )]
+    public async Task List()
+    {
+      var tagsInOrder = this.conf.Ext.Tags.OrderBy( x => x.Name );
+      StringBuilder sb = new StringBuilder( "" );
+      if ( tagsInOrder.Count() > 0 )
+      {
+        char lastHeader = '<';
+        foreach ( Tag t in tagsInOrder )
+        {
+          if ( t.Name[0] != lastHeader )
+          {
+            if ( lastHeader != '<' )
+              sb.Remove( sb.Length - 2, 2 );
+            lastHeader = t.Name[0];
+            sb.AppendLine();
+            sb.AppendLine( "# " + lastHeader + " #" );
+          }
+          sb.Append( "[" + t.Name + "]" );
+          sb.Append( "(" + Enum.GetName( typeof( TagType ), t.Type )[0] + "|" + t.Entries.Count() + ")" );
+          sb.Append( ", " );
+        }
+        sb.Remove( sb.Length - 2, 2 );
+      }
+      MessageService.SendMessage( Context, sb.ToString(),
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Block, Hightlight = "md" } );
+    }
+
+    [Command( "delete" )]
+    public async Task Delete( string tagName )
+    {
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      if ( tag == null )
+        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
+      else
+      {
+        if ( tag.Type == Config.TagType.Sound )
+          Directory.Delete( Path.Combine( "tag", tag.Name ), true );
+
+        this.conf.Ext.Tags.Remove( tag );
+        this.conf.Write();
+        MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich gelöscht!",
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
+      }
+    }
+
+    [Command( "info" )]
+    public async Task Info( string tagName )
+    {
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      if ( tag == null )
+        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
+      else
+      {
+        StringBuilder sb = new StringBuilder( "==== " + tag.Name + " =====" );
+        sb.AppendLine();
+        sb.AppendLine();
+
+        sb.Append( "Author: " );
+        sb.AppendLine( tag.Author );
+
+        sb.Append( "Typ: " );
+        sb.AppendLine( Enum.GetName( typeof( Config.TagType ), tag.Type ) );
+
+        sb.Append( "Erstellungs Datum: " );
+        sb.AppendLine( tag.CreateDate.ToLongDateString() );
+
+        sb.Append( "Hits: " );
+        sb.AppendLine( tag.Count.ToString() );
+
+        sb.Append( "Anzahl Einträge: " );
+        sb.AppendLine( tag.Entries.Count.ToString() );
+
+        MessageService.SendMessage( Context, sb.ToString(),
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Block } );
+      }
+    }
+
+    [Command( "raw" )]
+    public async Task Raw( string tagName )
+    {
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      if ( tag == null )
+        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
+      else
+      {
+        StringBuilder sb = new StringBuilder( $"==== {tag.Name} ====" );
+        sb.AppendLine();
+        sb.AppendLine();
+
+        foreach ( string entry in tag.Entries )
+          sb.AppendLine( entry );
+
+        MessageService.SendMessage( Context, sb.ToString(),
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Block } );
+      }
+    }
+
+    [Command( "help" )]
+    public async Task Help()
+    {
+      MessageService.SendMessage( Context, FullHelp(),
+        new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = Contracts.MessageType.Block } );
+    }
+
+    [Command()]
+    public async Task Send( string tagName )
+    {
+      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      if ( tag == null )
+        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
+          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Info } );
+      else
+      {
+        int idx = ( new Random() ).Next( 0, tag.Entries.Count() );
+        switch ( tag.Type )
+        {
+        case TagType.Text:
+          MessageService.SendMessage( Context, tag.Entries[idx],
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Block } );
+          break;
+        case TagType.Sound:
+          AudioService.StopPlaying = false;
+          string path = Path.Combine( "tag", tag.Name, idx + ".mp3" );
+          if ( !File.Exists( path ) )
+            await AudioService.DownloadAudio( tag.Entries[idx], path );
+          AudioService.SendAudio( Context, path, tag.Volume / 100f );
+          break;
+        case TagType.Url:
+          MessageService.SendMessage( Context, tag.Entries[idx],
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+          break;
+        default:
+          throw new ArgumentException( "WTF?!" );
+        }
+        tag.Count++;
+        this.conf.Write();
+      }
     }
 
     public string QuickHelp()
@@ -179,216 +343,6 @@ namespace NerdyBot.Commands
       sb.AppendLine();
       return sb.ToString();
     }
-    #endregion ICommand
-
-    private bool Create( string[] args, string author  )
-    {
-      bool response = true;
-      try
-      {
-        string tagName = args.First().ToLower();
-        this.svcMessage.Log( "creating tag '" + tagName + "'", author );
-        Tag tag = new Tag();
-        tag.Name = tagName;
-        tag.Author = author;
-        tag.CreateDate = DateTime.Now;
-        tag.Count = 0;
-        tag.Volume = 100;
-        tag.Entries = new List<string>();
-
-        switch ( args[1].ToLower() )
-        {
-        case "text":
-          tag.Type = Commands.Config.TagType.Text;
-          AddTextToTag( tag, args.Skip( 2 ).ToArray() );
-          break;
-
-        case "sound":
-          tag.Type = Commands.Config.TagType.Sound;
-          AddSoundToTag( tag, args.Skip( 2 ).ToArray() );
-          break;
-
-        case "url":
-          tag.Type = Commands.Config.TagType.Url;
-          AddUrlToTag( tag, args.Skip( 2 ).ToArray() );
-          break;
-        default:
-          response = false;
-          break;
-        }
-        this.conf.Ext.Tags.Add( tag );
-        this.conf.Write();
-        this.svcMessage.Log( "finished creation", author );
-      }
-      catch ( Exception ex )
-      {
-        this.svcMessage.Log( ex.Message, "Exception" );
-        response = false;
-      }
-      return response;
-    }
-    private void Edit( string[] args, string author, out string response )
-    {
-      response = string.Empty;
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == args[0].ToLower() );
-      if ( tag == null )
-        response = "Tag '" + args[0] + "' existiert nicht!";
-      else
-      {
-        if ( tag.Author == author )
-        {
-          string[] entries = args.Skip( 2 ).ToArray();
-
-          switch ( args[1] )
-          {
-          case "add":
-            switch ( tag.Type )
-            {
-            case Commands.Config.TagType.Text:
-              AddTextToTag( tag, entries );
-              break;
-            case Commands.Config.TagType.Sound:
-              AddSoundToTag( tag, entries );
-              break;
-            case Commands.Config.TagType.Url:
-              AddUrlToTag( tag, entries );
-              break;
-            default:
-              throw new ArgumentException( "WTF?!?!" );
-            }
-            response = entries.Count() + " Einträge zu '" + tag.Name + " hinzugefügt'!";
-            break;
-          case "remove":
-            int remCount = RemoveTagEntry( tag, entries );
-            response = remCount + " / " + entries.Count() + " removed";
-            break;
-          case "rename":
-            if ( IsValidName( entries[0].ToLower() ) )
-            {
-              if ( tag.Type != Commands.Config.TagType.Text )
-              {
-                string dirName = tag.Type == Commands.Config.TagType.Sound ? "sounds" : "pics";
-                Directory.Move( Path.Combine( dirName, tag.Name ), Path.Combine( dirName, entries[0] ) );
-              }
-              tag.Name = entries[0];
-              response = "Tag umbenannt in '" + tag.Name + "'!";
-            }
-            else
-              response = "Tag '" + entries[0] + "' existiert bereits oder ist reserviert!!";
-            break;
-          case "volume":
-            short vol;
-            if ( short.TryParse( entries[0], out vol ) && vol > 0 && vol <= 100 )
-              tag.Volume = vol;
-            else
-              response = "Die Lautstärke muss eine Zahl zwischen 0 und 101 sein!";
-            break;
-          default:
-            response = "Die Option Name '" + args[2] + "' ist nicht valide!";
-            break;
-          }
-          this.conf.Write();
-        }
-        else
-          response = "Du bist zu unwichtig dafür!";
-      }
-    }
-    private void List( IMessageChannel channel )
-    {
-      var tagsInOrder = this.conf.Ext.Tags.OrderBy( x => x.Name );
-      StringBuilder sb = new StringBuilder( "" );
-      if ( tagsInOrder.Count() > 0 )
-      {
-        char lastHeader = '<';
-        foreach ( Tag t in tagsInOrder )
-        {
-          if ( t.Name[0] != lastHeader )
-          {
-            if ( lastHeader != '<' )
-              sb.Remove( sb.Length - 2, 2 );
-            lastHeader = t.Name[0];
-            sb.AppendLine();
-            sb.AppendLine( "# " + lastHeader + " #" );
-          }
-          sb.Append( "[" + t.Name + "]" );
-          sb.Append( "(" + Enum.GetName( typeof( Commands.Config.TagType ), t.Type )[0] + "|" + t.Entries.Count() + ")" );
-          sb.Append( ", " );
-        }
-        sb.Remove( sb.Length - 2, 2 );
-      }
-      this.svcMessage.SendMessage( Context, sb.ToString(),
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = Contracts.MessageType.Block, Hightlight = "md" } );
-    }
-    private void Delete( Tag tag )
-    {
-      if ( tag.Type == Commands.Config.TagType.Sound )
-        Directory.Delete( Path.Combine( "tag", tag.Name ), true );
-
-      this.conf.Ext.Tags.Remove( tag );
-      this.conf.Write();
-    }
-    private void Info( Tag tag, IMessageChannel channel )
-    {
-      StringBuilder sb = new StringBuilder( "==== " + tag.Name + " =====" );
-      sb.AppendLine();
-      sb.AppendLine();
-
-      sb.Append( "Author: " );
-      sb.AppendLine( tag.Author );
-
-      sb.Append( "Typ: " );
-      sb.AppendLine( Enum.GetName( typeof( Commands.Config.TagType ), tag.Type ) );
-
-      sb.Append( "Erstellungs Datum: " );
-      sb.AppendLine( tag.CreateDate.ToLongDateString() );
-
-      sb.Append( "Hits: " );
-      sb.AppendLine( tag.Count.ToString() );
-
-      sb.Append( "Anzahl Einträge: " );
-      sb.AppendLine( tag.Entries.Count.ToString() );
-
-      this.svcMessage.SendMessage( Context, sb.ToString(),
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = Contracts.MessageType.Block } );
-    }
-    private void Raw( Tag tag, IMessageChannel channel )
-    {
-      StringBuilder sb = new StringBuilder( "==== " + tag.Name + " ====" );
-      sb.AppendLine();
-      sb.AppendLine();
-
-      foreach ( string entry in tag.Entries )
-        sb.AppendLine( entry );
-
-      this.svcMessage.SendMessage( Context, sb.ToString(),
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = channel.Id, MessageType = Contracts.MessageType.Block } );
-    }
-    private void Send( Tag tag )
-    {
-      int idx = ( new Random() ).Next( 0, tag.Entries.Count() );
-      switch ( tag.Type )
-      {
-      case Commands.Config.TagType.Text:
-        this.svcMessage.SendMessage( Context, tag.Entries[idx],
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = Contracts.MessageType.Block } );
-        break;
-      case Commands.Config.TagType.Sound:
-        this.svcAudio.StopPlaying = false;
-        string path = Path.Combine( "tag", tag.Name, idx + ".mp3" );
-        if ( !File.Exists( path ) )
-          this.svcAudio.DownloadAudio( tag.Entries[idx], path );
-        this.svcAudio.SendAudio( Context, path, tag.Volume / 100f );
-        break;
-      case Commands.Config.TagType.Url:
-        this.svcMessage.SendMessage( Context, tag.Entries[idx],
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-        break;
-      default:
-        throw new ArgumentException( "WTF?!" );
-      }
-      tag.Count++;
-      this.conf.Write();
-    }
 
     private bool IsValidName( string name )
     {
@@ -410,7 +364,7 @@ namespace NerdyBot.Commands
 
       for ( int i = 0; i < args.Count(); i++ )
       {
-        this.svcAudio.DownloadAudio( args[i], Path.Combine( path, ( listCount + i ) + ".mp3" ) );
+        AudioService.DownloadAudio( args[i], Path.Combine( path, ( listCount + i ) + ".mp3" ) );
         tag.Entries.Add( args[i] );
       }
     }
@@ -423,7 +377,7 @@ namespace NerdyBot.Commands
       int remCount = 0;
       switch ( tag.Type )
       {
-      case Commands.Config.TagType.Text:
+      case TagType.Text:
         string text = string.Empty;
         for ( int i = 0; i < args.Count(); i++ )
           text += " " + args[i];
@@ -433,8 +387,8 @@ namespace NerdyBot.Commands
             remCount++;
 
         break;
-      case Commands.Config.TagType.Sound:
-      case Commands.Config.TagType.Url:
+      case TagType.Sound:
+      case TagType.Url:
         for ( int i = 0; i < args.Count(); i++ )
         {
           int idx = tag.Entries.FindIndex( s => s == args[i] );
@@ -442,7 +396,7 @@ namespace NerdyBot.Commands
           {
             tag.Entries.RemoveAt( idx );
             remCount++;
-            if ( tag.Type == Commands.Config.TagType.Sound )
+            if ( tag.Type == TagType.Sound )
               File.Delete( Path.Combine( "sounds", tag.Name, idx + ".mp3" ) );
           }
         }

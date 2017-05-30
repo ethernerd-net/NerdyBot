@@ -1,10 +1,9 @@
-﻿using NerdyBot.Contracts;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace NerdyBot.Commands.Config
+namespace NerdyBot.Config
 {
-  public class BaseCommandConfig : BaseConfig, ICommandConfig
+  public class BaseCommandConfig : BaseConfig
   {
     public BaseCommandConfig( string defaultKey/*, IEnumerable<string> aliases = null*/ )
       :base( defaultKey )

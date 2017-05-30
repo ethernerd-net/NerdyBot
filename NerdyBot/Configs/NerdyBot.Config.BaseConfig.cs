@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.IO;
 
-namespace NerdyBot
+namespace NerdyBot.Config
 {
   public abstract class BaseConfig
   {

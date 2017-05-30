@@ -1,7 +1,4 @@
-﻿using Discord.Commands;
-using NerdyBot.Contracts;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -9,130 +6,107 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
+using Discord.Commands;
+using Newtonsoft.Json;
+
+using NerdyBot.Contracts;
+
 namespace NerdyBot.Commands
 {
   [Group( "random" ), Alias( "rnd", "rand" )]
   public class RandomTag : ModuleBase
   {
-    private MessageService svcMessage;
-
-    #region ICommand
-    public RandomTag( MessageService svcMessage )
-    {
-      this.svcMessage = svcMessage;
-    }
+    public MessageService MessageService { get; set; }
 
     [Command( "cat" )]
     public async Task Cat()
     {
-        string catJson = ( new WebClient() ).DownloadString( "http://random.cat/meow" );
-        var cat = JsonConvert.DeserializeObject<RandomCat>( catJson );
-        this.svcMessage.SendMessage( Context, cat.file.Replace( "\\", "" ),
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      string catJson = ( new WebClient() ).DownloadString( "http://random.cat/meow" );
+      var cat = JsonConvert.DeserializeObject<RandomCat>( catJson );
+      MessageService.SendMessage( Context, cat.file.Replace( "\\", "" ),
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
+
     [Command( "penguin" )]
-    public Task Penguin()
+    public async Task Penguin()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        string pengu = ( new WebClient() ).DownloadString( "http://penguin.wtf/" );
-        this.svcMessage.SendMessage( Context, pengu,
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-      } );
+      string pengu = ( new WebClient() ).DownloadString( "http://penguin.wtf/" );
+      MessageService.SendMessage( Context, pengu,
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
+
     [Command( "bunny" )]
-    public Task Bunny()
+    public async Task Bunny()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        string bunnyJson = ( new WebClient() ).DownloadString( "https://api.bunnies.io/v2/loop/random/?media=gif" );
-        var bunny = JsonConvert.DeserializeObject<RandomBunny>( bunnyJson );
-        this.svcMessage.SendMessage( Context, bunny.media.gif,
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-      } );
+      string bunnyJson = ( new WebClient() ).DownloadString( "https://api.bunnies.io/v2/loop/random/?media=gif" );
+      var bunny = JsonConvert.DeserializeObject<RandomBunny>( bunnyJson );
+      MessageService.SendMessage( Context, bunny.media.gif,
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
+
     [Command( "chuck" )]
-    public Task Chuck()
+    public async Task Chuck()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        string chuckJson = ( new WebClient() ).DownloadString( "http://api.icndb.com/jokes/random" );
-        var chuck = JsonConvert.DeserializeObject<RandomChuck>( chuckJson );
-        this.svcMessage.SendMessage( Context, chuck.value.joke,
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-      } );
+      string chuckJson = ( new WebClient() ).DownloadString( "http://api.icndb.com/jokes/random" );
+      var chuck = JsonConvert.DeserializeObject<RandomChuck>( chuckJson );
+      MessageService.SendMessage( Context, chuck.value.joke,
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
+
     [Command( "joke" )]
-    public Task Joke()
+    public async Task Joke()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        string jokeJson = ( new WebClient() ).DownloadString( "http://tambal.azurewebsites.net/joke/random" );
-        var joke = JsonConvert.DeserializeObject<ChuckJoke>( jokeJson );
-        this.svcMessage.SendMessage( Context, joke.joke,
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-      } );
+      string jokeJson = ( new WebClient() ).DownloadString( "http://tambal.azurewebsites.net/joke/random" );
+      var joke = JsonConvert.DeserializeObject<ChuckJoke>( jokeJson );
+      MessageService.SendMessage( Context, joke.joke,
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
+
     [Command( "yomomma" )]
-    public Task Yomomma()
+    public async Task Yomomma()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        string momJson = ( new WebClient() ).DownloadString( "http://api.yomomma.info/" );
-        var mom = JsonConvert.DeserializeObject<ChuckJoke>( momJson );
-        this.svcMessage.SendMessage( Context, mom.joke,
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-      } );
+      string momJson = ( new WebClient() ).DownloadString( "http://api.yomomma.info/" );
+      var mom = JsonConvert.DeserializeObject<ChuckJoke>( momJson );
+      MessageService.SendMessage( Context, mom.joke,
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
 
     [Command( "quote" )]
-    public Task Quote()
+    public async Task Quote()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        string quoteJson = ( new WebClient() ).DownloadString( "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand" );
-        var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
-        string text = StripHTML( EntityToUnicode( quote.content ) );
-        this.svcMessage.SendMessage( Context, text + Environment.NewLine + Environment.NewLine + "-" + quote.title,
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
-      } );
+      string quoteJson = ( new WebClient() ).DownloadString( "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand" );
+      var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
+      string text = StripHTML( EntityToUnicode( quote.content ) );
+      MessageService.SendMessage( Context, text + Environment.NewLine + Environment.NewLine + "-" + quote.title,
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
     }
 
     [Command( "trump" )]
-    public Task Trump()
+    public async Task Trump()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        string trumpJson = ( new WebClient() ).DownloadString( "https://api.whatdoestrumpthink.com/api/v1/quotes/random" );
-        var trump = JsonConvert.DeserializeObject<TrumpQuote>( trumpJson );
-        this.svcMessage.SendMessage( Context, "Trump : " + trump.message,
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-      } );
+      string trumpJson = ( new WebClient() ).DownloadString( "https://api.whatdoestrumpthink.com/api/v1/quotes/random" );
+      var trump = JsonConvert.DeserializeObject<TrumpQuote>( trumpJson );
+      MessageService.SendMessage( Context, "Trump : " + trump.message,
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
 
     [Command( "xkcd" )]
-    public Task xkcd()
+    public async Task xkcd()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        string xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/info.0.json" );
-        var xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
+      string xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/info.0.json" );
+      var xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
 
-        xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/" + ( new Random() ).Next( xkcd.num ) + "/info.0.json" );
-        xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
-        this.svcMessage.SendMessage( Context, xkcd.img.Replace( "\\", "" ),
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
-      } );
+      xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/" + ( new Random() ).Next( xkcd.num ) + "/info.0.json" );
+      xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
+      MessageService.SendMessage( Context, xkcd.img.Replace( "\\", "" ),
+        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
 
     [Command( "help" )]
-    public Task help()
+    public async Task help()
     {
-      return Task.Factory.StartNew( () =>
-      {
-        this.svcMessage.SendMessage( Context, FullHelp(),
+      MessageService.SendMessage( Context, FullHelp(),
         new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
-      } );
     }
 
     public string QuickHelp()
@@ -154,7 +128,6 @@ namespace NerdyBot.Commands
       sb.AppendLine( "option: cat | penguin | bunny | chuck | joke | yomomma | quote | trump | xkcd | help" );
       return sb.ToString();
     }
-    #endregion ICommand
 
     public string EntityToUnicode( string html )
     {

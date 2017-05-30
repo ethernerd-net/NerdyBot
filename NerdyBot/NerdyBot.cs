@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 
 using NerdyBot.Contracts;
+using NerdyBot.Config;
 
 namespace NerdyBot
 {
@@ -45,6 +43,7 @@ namespace NerdyBot
 
       svcProvider.AddService( svcAudio );
       svcProvider.AddService( svcMessage );
+      svcProvider.AddService( client );
 
       await svcCommand.AddModulesAsync( Assembly.GetEntryAssembly() );
      // await svcCommand.AddModuleAsync( typeof( NerdyBot.
