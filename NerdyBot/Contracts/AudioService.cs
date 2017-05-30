@@ -84,17 +84,18 @@ namespace NerdyBot.Contracts
       if ( channel != null )
       {
         //Log( "playing " + Path.GetDirectoryName( localPath ), vUser.ToString() );
-        if ( channel.Id != lastChannel )
+        /*if ( lastChannel != channel.Id )
         {
-          audioClient = await channel.ConnectAsync();
           lastChannel = channel.Id;
-        }
+        }*/
+        audioClient = await channel.ConnectAsync();
+
         lock ( playing )
         {
           try
           {
-            var discord = audioClient.CreatePCMStream( AudioApplication.Mixed );
             var OutFormat = new WaveFormat( 48000, 16, 2 ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
+            using ( var discord = audioClient.CreatePCMStream( AudioApplication.Mixed ) )
             using ( var MP3Reader = new Mp3FileReader( localPath ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
             using ( var resampler = new MediaFoundationResampler( MP3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
             {
@@ -112,9 +113,9 @@ namespace NerdyBot.Contracts
                     buffer[i] = 0;
                 }
                 discord.Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
+                discord.FlushAsync();
               }
             }
-            discord.FlushAsync();
           }
           catch ( Exception ex )
           {

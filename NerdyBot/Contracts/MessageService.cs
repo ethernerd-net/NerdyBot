@@ -79,8 +79,8 @@ namespace NerdyBot.Contracts
     private IEnumerable<string> ChunkMessage( string str )
     {
       if ( str.Length > chunkSize )
-        return Enumerable.Range( 0, str.Length / chunkSize )
-          .Select( i => str.Substring( i * chunkSize, chunkSize ) );
+        return Enumerable.Range( 0, (int)Math.Ceiling( (double)str.Length / ( double )chunkSize ) )
+          .Select( i => str.Substring( i * chunkSize, ( i * chunkSize + chunkSize > str.Length ? str.Length - i * chunkSize : chunkSize ) ) );
       return new string[] { str };
     }
     private string FormatMessage( string message, MessageType format, string highlight )
@@ -89,10 +89,10 @@ namespace NerdyBot.Contracts
       switch ( format )
       {
       case MessageType.Block:
-        formatedMessage = "```" + highlight + Environment.NewLine + message + "```";
+        formatedMessage = $"```{highlight}{Environment.NewLine}{message}```";
         break;
       case MessageType.Info:
-        formatedMessage = "`" + message + "`";
+        formatedMessage = $"`{message}`";
         break;
       case MessageType.Normal:
       default:
