@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 using Discord.Commands;
 
-using NerdyBot.Contracts;
+using NerdyBot.Services;
 using NerdyBot.Config;
 
 namespace NerdyBot.Commands
@@ -48,7 +48,7 @@ namespace NerdyBot.Commands
         new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
 
-    public string QuickHelp()
+    public static string QuickHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.AppendLine( "======== 8Ball ========" );
@@ -57,7 +57,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: 8ball" );
       return sb.ToString();
     }
-    public string FullHelp()
+    public static string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );

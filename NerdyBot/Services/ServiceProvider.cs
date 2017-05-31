@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace NerdyBot.Contracts
+namespace NerdyBot.Services
 {
   public class ServiceProvider : IServiceProvider
   {

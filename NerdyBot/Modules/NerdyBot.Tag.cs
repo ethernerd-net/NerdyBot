@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Discord.Commands;
 
 using NerdyBot.Config;
-using NerdyBot.Contracts;
+using NerdyBot.Services;
 
 namespace NerdyBot.Commands
 {
@@ -294,7 +294,7 @@ namespace NerdyBot.Commands
       }
     }
 
-    public string QuickHelp()
+    public static string QuickHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.AppendLine( "======== TAG ========" );
@@ -304,7 +304,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: tag" );
       return sb.ToString();
     }
-    public string FullHelp()
+    public static string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );

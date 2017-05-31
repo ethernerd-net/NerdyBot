@@ -1,5 +1,5 @@
 ﻿using Discord.Commands;
-using NerdyBot.Contracts;
+using NerdyBot.Services;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
@@ -61,7 +61,7 @@ namespace NerdyBot.Commands
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
     }
 
-    public string QuickHelp()
+    public static string QuickHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.AppendLine( "======== Urban ========" );
@@ -70,7 +70,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: urban" );
       return sb.ToString();
     }
-    public string FullHelp()
+    public static string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );

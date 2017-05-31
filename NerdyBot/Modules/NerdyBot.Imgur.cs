@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Discord.Commands;
 
-using NerdyBot.Contracts;
+using NerdyBot.Services;
 
 namespace NerdyBot.Commands
 {
@@ -47,7 +47,7 @@ namespace NerdyBot.Commands
     }
 
 
-    public string QuickHelp()
+    public static string QuickHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.AppendLine( "======== IMGUR ========" );
@@ -56,7 +56,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: imgur" );
       return sb.ToString();
     }
-    public string FullHelp()
+    public static string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );

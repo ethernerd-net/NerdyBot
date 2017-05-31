@@ -5,85 +5,81 @@ using System.Linq;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
+using NAudio.Wave;
 using Discord.Audio;
 using Discord.Commands;
-using NAudio.Wave;
 
-namespace NerdyBot.Contracts
+namespace NerdyBot.Services
 {
   public class AudioService
   {
-    private ulong lastChannel = 0;
+    //private ulong lastChannel = 0;
     private IAudioClient audioClient;
+    private MessageService svcMessage;
     private object playing = new object();
 
-    public bool StopPlaying { get; set; }
-    public Task DownloadAudio( string url, string outp )
+    public AudioService( MessageService svcMessage )
     {
-      return Task.Run( () =>
-      {
-        try
-        {
-          bool transform = false;
-          string ext = Path.GetExtension( url );
-          //Log( "downloading " + url );
-          if ( ext != string.Empty )
-          {
-            string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp" + ext );
-            if ( ext == ".mp3" )
-              tempOut = outp;
-
-            if ( !Directory.Exists( Path.GetDirectoryName( tempOut ) ) )
-              Directory.CreateDirectory( Path.GetDirectoryName( tempOut ) );
-
-            ( new WebClient() ).DownloadFile( url, tempOut );
-
-            transform = ( ext != ".mp3" );
-          }
-          else
-          {
-            //Externe Prozesse sind böse, aber der kann so viel :S
-            //Ich könne allerdings auf die ganzen features verzichten und nen reinen yt dl anbieten
-            //https://github.com/flagbug/YoutubeExtractor
-            string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp.%(ext)s" );
-            ProcessStartInfo ytdl = new ProcessStartInfo();
-            ytdl.WindowStyle = ProcessWindowStyle.Hidden;
-            ytdl.FileName = "ext\\youtube-dl.exe";
-
-            ytdl.Arguments = "--extract-audio --audio-quality 0 --no-playlist --output \"" + tempOut + "\" \"" + url + "\"";
-            Process.Start( ytdl ).WaitForExit();
-            transform = true;
-          }
-          //Log( "download complete" );
-          if ( transform )
-          {
-            string tempFIle = Directory.GetFiles( Path.GetDirectoryName( outp ), "temp.*", SearchOption.TopDirectoryOnly ).First();
-            //Log( "converting: " + Path.GetFileName( tempFIle ) );
-
-            ProcessStartInfo ffmpeg = new ProcessStartInfo();
-            ffmpeg.WindowStyle = ProcessWindowStyle.Hidden;
-            ffmpeg.FileName = "ext\\ffmpeg.exe";
-
-            ffmpeg.Arguments = "-i " + tempFIle + " -f mp3 " + outp;
-            Process.Start( ffmpeg ).WaitForExit();
-
-            File.Delete( tempFIle );
-            //Log( "conversion complete" );
-          }
-        }
-        catch ( Exception ex )
-        {
-          throw new ArgumentException( ex.Message );
-        }
-      } );
+      this.svcMessage = svcMessage;
     }
-    public async void SendAudio( ICommandContext context, string localPath, float volume = 1f, bool delAfterPlay = false )
+
+    public bool StopPlaying { get; set; }
+    public async Task DownloadAudio( string url, string outp )
+    {
+      bool transform = false;
+      string ext = Path.GetExtension( url );
+      this.svcMessage.Log( "downloading " + url );
+      if ( ext != string.Empty )
+      {
+        string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp" + ext );
+        if ( ext == ".mp3" )
+          tempOut = outp;
+
+        if ( !Directory.Exists( Path.GetDirectoryName( tempOut ) ) )
+          Directory.CreateDirectory( Path.GetDirectoryName( tempOut ) );
+
+        ( new WebClient() ).DownloadFile( url, tempOut );
+
+        transform = ( ext != ".mp3" );
+      }
+      else
+      {
+        //Externe Prozesse sind böse, aber der kann so viel :S
+        //Ich könne allerdings auf die ganzen features verzichten und nen reinen yt dl anbieten
+        //https://github.com/flagbug/YoutubeExtractor
+        string tempOut = Path.Combine( Path.GetDirectoryName( outp ), "temp.%(ext)s" );
+        ProcessStartInfo ytdl = new ProcessStartInfo();
+        ytdl.WindowStyle = ProcessWindowStyle.Hidden;
+        ytdl.FileName = "ext\\youtube-dl.exe";
+
+        ytdl.Arguments = "--extract-audio --audio-quality 0 --no-playlist --output \"" + tempOut + "\" \"" + url + "\"";
+        Process.Start( ytdl ).WaitForExit();
+        transform = true;
+      }
+      this.svcMessage.Log( "download complete" );
+      if ( transform )
+      {
+        string tempFIle = Directory.GetFiles( Path.GetDirectoryName( outp ), "temp.*", SearchOption.TopDirectoryOnly ).First();
+        //Log( "converting: " + Path.GetFileName( tempFIle ) );
+
+        ProcessStartInfo ffmpeg = new ProcessStartInfo();
+        ffmpeg.WindowStyle = ProcessWindowStyle.Hidden;
+        ffmpeg.FileName = "ext\\ffmpeg.exe";
+
+        ffmpeg.Arguments = "-i " + tempFIle + " -f mp3 " + outp;
+        Process.Start( ffmpeg ).WaitForExit();
+
+        File.Delete( tempFIle );
+        this.svcMessage.Log( "conversion complete" );
+      }
+    }
+    public async Task SendAudio( ICommandContext context, string localPath, float volume = 1f, bool delAfterPlay = false )
     {
       var channel = context.Guild.GetVoiceChannelsAsync().Result.FirstOrDefault( vc => vc.GetUserAsync( context.User.Id ).Result != null );
 
       if ( channel != null )
       {
-        //Log( "playing " + Path.GetDirectoryName( localPath ), vUser.ToString() );
+        this.svcMessage.Log( "playing " + Path.GetDirectoryName( localPath ), context.User.ToString() );
         /*if ( lastChannel != channel.Id )
         {
           lastChannel = channel.Id;
@@ -119,7 +115,7 @@ namespace NerdyBot.Contracts
           }
           catch ( Exception ex )
           {
-            Console.WriteLine( ex.Message );
+            this.svcMessage.Log( ex.Message, "Exception", Discord.LogSeverity.Error );
           }
           StopPlaying = false;
           if ( delAfterPlay )
@@ -127,7 +123,8 @@ namespace NerdyBot.Contracts
         }
       }
     }
-    public async void LeaveChannel()
+
+    public async Task LeaveChannel()
     {
       if ( this.audioClient != null )
         await this.audioClient.StopAsync();

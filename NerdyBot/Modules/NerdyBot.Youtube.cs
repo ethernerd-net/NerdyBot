@@ -6,7 +6,7 @@ using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 
 using NerdyBot.Config;
-using NerdyBot.Contracts;
+using NerdyBot.Services;
 using Discord.Commands;
 
 namespace NerdyBot.Commands
@@ -56,7 +56,7 @@ namespace NerdyBot.Commands
         new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
     }
 
-    public string QuickHelp()
+    public static string QuickHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.AppendLine( "======== Youtube ========" );
@@ -65,7 +65,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: yotuube" );
       return sb.ToString();
     }
-    public string FullHelp()
+    public static string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );

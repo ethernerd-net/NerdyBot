@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Newtonsoft.Json;
 
-using NerdyBot.Contracts;
+using NerdyBot.Services;
 
 namespace NerdyBot.Commands
 {
@@ -109,7 +109,7 @@ namespace NerdyBot.Commands
         new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
     }
 
-    public string QuickHelp()
+    public static string QuickHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.AppendLine( "======== RANDOM ========" );
@@ -118,7 +118,7 @@ namespace NerdyBot.Commands
       sb.AppendLine( "Key: random" );
       return sb.ToString();
     }
-    public string FullHelp()
+    public static string FullHelp()
     {
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );

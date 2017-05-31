@@ -155,10 +155,6 @@
       <HintPath>..\packages\Nito.AsyncEx.4.0.1\lib\net45\Nito.AsyncEx.Enlightenment.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="RestSharp, Version=105.2.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\RestSharp.105.2.3\lib\net452\RestSharp.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.AppContext, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.AppContext.4.3.0\lib\net46\System.AppContext.dll</HintPath>
@@ -250,10 +246,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Modules\NerdyBot.Base.cs" />
-    <Compile Include="Contracts\AudioService.cs" />
-    <Compile Include="Contracts\LogMessageEventArgs.cs" />
-    <Compile Include="Contracts\MessageService.cs" />
-    <Compile Include="Contracts\ServiceProvider.cs" />
+    <Compile Include="Services\AudioService.cs" />
+    <Compile Include="Services\MessageService.cs" />
+    <Compile Include="Services\ServiceProvider.cs" />
     <Compile Include="ModuleConfigs\NerdyBot.Config.8Ball.cs" />
     <Compile Include="Modules\NerdyBot.8Ball.cs" />
     <Compile Include="ModuleConfigs\NerdyBot.Config.BaseModuleConfig.cs" />

@@ -1,16 +1,20 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
 
 using Discord.Commands;
 using Discord.WebSocket;
 
-using NerdyBot.Contracts;
+using NerdyBot.Services;
 
 namespace NerdyBot.Commands
 {
   public class NerdyBotBase : ModuleBase
   {
     public AudioService AudioService { get; set; }
+    public MessageService MessageService { get; set; }
     public DiscordSocketClient Client { get; set; }
 
     [Command( "purge" ), Alias( "t" )]
@@ -37,5 +41,24 @@ namespace NerdyBot.Commands
       if ( Context.Guild.GetUserAsync( Context.User.Id ).Result.GuildPermissions.Administrator )
         Client.StopAsync();
     }
+    
+    [Command( "help" )]
+    public async Task ShowHelp()
+    {
+      StringBuilder sb = new StringBuilder();
+      Assembly assembly = Assembly.GetExecutingAssembly();
+
+      foreach ( Type type in assembly.GetTypes().Where( type => type.BaseType == typeof( ModuleBase ) ) )
+      {
+        MethodInfo help;
+        if ( ( help = type.GetMethod( "QuickHelp" ) ) != null )
+        {
+           sb.AppendLine( (string)help.Invoke( null, null ) );
+           sb.AppendLine();
+           sb.AppendLine();
+         }
+       }
+       MessageService.SendMessage( Context, sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, Split = true, MessageType = MessageType.Block } );
+     }
   }
 }

@@ -1,18 +1,28 @@
-﻿using Discord;
-using Discord.Commands;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
-namespace NerdyBot.Contracts
+using Discord;
+using Discord.Commands;
+using Discord.WebSocket;
+
+namespace NerdyBot.Services
 {
   public class MessageService
   {
     private ulong responseChannelId;
-    public MessageService( ulong defaultResponseChannel )
+
+    public MessageService( DiscordSocketClient discordClient, ulong defaultResponseChannel )
     {
       responseChannelId = defaultResponseChannel;
+      discordClient.Log += ClientLog;
+    }
+
+    private async Task ClientLog( LogMessage arg )
+    {
+      Console.WriteLine( arg.ToString() );
     }
 
     public async void SendMessage( ICommandContext context, string message, SendMessageOptions options )
@@ -21,7 +31,7 @@ namespace NerdyBot.Contracts
       {
       case TargetType.User:
         var usr = await context.Guild.GetUserAsync( context.User.Id );
-        var dmcChannel = await usr.GetDMChannelAsync();
+        var dmcChannel = await usr.CreateDMChannelAsync();
         if ( !options.Split && message.Length > 1990 )
         {
           File.WriteAllText( context.User.Id + "_raw.txt", message );
@@ -70,9 +80,9 @@ namespace NerdyBot.Contracts
       }
     }
 
-    public void Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info )
+    public async Task Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info )
     {
-      //this.client.Log.Log( logLevel, source, text );
+      await ClientLog( new LogMessage( logLevel, source, text ) );
     }
 
     private readonly int chunkSize = 1990;
