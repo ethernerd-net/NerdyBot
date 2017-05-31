@@ -5,36 +5,29 @@ using System.Threading.Tasks;
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 
-using NerdyBot.Config;
 using NerdyBot.Services;
 using Discord.Commands;
+using NerdyBot.Models;
 
 namespace NerdyBot.Commands
 {
   [Group( "youtube" ), Alias( "yt" )]
   public class YoutubeCommand : ModuleBase
   {
-    private BaseModuleConfig conf;
-
+    public DatabaseService DatabaseService { get; set; }
     public MessageService MessageService { get; set; }
-    
-    public YoutubeCommand()
-    {
-      this.conf = new BaseModuleConfig( "youtube" );
-      this.conf.Read();
-    }
 
     [Command()]
-    public async Task Execute( params string[] args )
+    public async Task Execute( string query )
     {
       var youtubeService = new YouTubeService( new BaseClientService.Initializer()
       {
-        ApiKey = this.conf.ApiKey,
+        ApiKey = DatabaseService.Database.Table<ModuleConfig>().First( mc => mc.Name == "youtube" ).ApiKey,
         ApplicationName = "NerdyBot"
       } );
 
       var searchListRequest = youtubeService.Search.List( "snippet" );
-      searchListRequest.Q = string.Join( " ", args ); // Replace with your search term.
+      searchListRequest.Q = string.Join( " ", query ); // Replace with your search term.
       searchListRequest.MaxResults = 1;
       searchListRequest.Type = "video";
       searchListRequest.Order = SearchResource.ListRequest.OrderEnum.ViewCount;

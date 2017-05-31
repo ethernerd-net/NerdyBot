@@ -25,11 +25,10 @@ namespace NerdyBot.Commands
         new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
     }
 
-
     [Command()]
-    public async Task Execute( params string[] args )
+    public async Task Execute( string query )
     {
-      var request = WebRequest.CreateHttp( "https://api.imgur.com/3/gallery/search/viral?q=" + string.Join( " ", args ) );
+      var request = WebRequest.CreateHttp( $"https://api.imgur.com/3/gallery/search/viral?q={query}" );
       request.Headers.Add( HttpRequestHeader.Authorization, "Client-ID 9101404d39fcd20" );
       var response = ( HttpWebResponse )await request.GetResponseAsync();
       using ( StreamReader reader = new StreamReader( response.GetResponseStream() ) )

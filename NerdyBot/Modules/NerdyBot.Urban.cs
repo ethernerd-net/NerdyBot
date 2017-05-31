@@ -1,6 +1,7 @@
 ﻿using Discord.Commands;
 using NerdyBot.Services;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,20 +25,27 @@ namespace NerdyBot.Commands
     }
 
     [Command( "sound" )]
-    public async Task ExecuteSound( params string[] args )
+    public async Task ExecuteSound( string query )
     {
-      string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", args ) );
+      string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + query );
       var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
       if ( urban.sounds != null && urban.sounds.Count() > 0 )
       {
         string soundUrl = urban.sounds.First();
         if ( soundUrl.EndsWith( ".mp3" ) )
         {
-          AudioService.StopPlaying = false;
-          string path = Path.Combine( "urban", string.Join( " ", args.Skip( 1 ) ) + ".mp3" );
-          if ( !File.Exists( path ) )
-            AudioService.DownloadAudio( urban.sounds.First(), path );
-          AudioService.SendAudio( Context, path );
+          try
+          {
+            AudioService.StopPlaying = false;
+            string path = Path.Combine( "urban", string.Join( " ", query.Skip( 1 ) ) + ".mp3" );
+            var audioBytes = await AudioService.DownloadAudio( urban.sounds.First() );
+            AudioService.SendAudio( Context, audioBytes );
+          }
+          catch ( Exception ex )
+          {
+            MessageService.SendMessage( Context, ex.Message,
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+          }
         }
         else
           MessageService.SendMessage( Context, "404, Urban not found!",
@@ -49,9 +57,9 @@ namespace NerdyBot.Commands
     }
 
     [Command()]
-    public async Task Execute( params string[] args )
+    public async Task Execute( string query )
     {
-      string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + string.Join( " ", args ) );
+      string urbanJson = ( new WebClient() ).DownloadString( "http://api.urbandictionary.com/v0/define?term=" + query );
       var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
       if ( urban.list != null && urban.list.Count() > 0 )
         MessageService.SendMessage( Context, urban.list.First().permalink.Replace( "\\", "" ),

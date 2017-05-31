@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -7,30 +8,28 @@ using Discord.Commands;
 using Discord.WebSocket;
 
 using NerdyBot.Services;
-using NerdyBot.Config;
+
 
 namespace NerdyBot
 {
   class NerdyBot
   {
+    private const char PREFIX = '!';
     private DiscordSocketClient client = new DiscordSocketClient();
 
     private ServiceProvider svcProvider = new ServiceProvider();
 
     private CommandService svcCommand = new CommandService();
+    private DatabaseService svcDatabase;
     private AudioService svcAudio;
     private MessageService svcMessage;
-
-    private MainConfig conf;
-    private const string MAINCFG = "cfg";
     
     internal NerdyBot()
     {
-      conf = new MainConfig( MAINCFG );
-      conf.Read();
       
-      this.svcMessage = new MessageService( this.client, conf.ResponseChannel );
+      this.svcMessage = new MessageService( this.client );
       this.svcAudio = new AudioService( svcMessage );
+      this.svcDatabase = new DatabaseService();
     }
 
     private async Task ClientReady()
@@ -46,6 +45,7 @@ namespace NerdyBot
 
       svcProvider.AddService( svcAudio );
       svcProvider.AddService( svcMessage );
+      svcProvider.AddService( svcDatabase );
       svcProvider.AddService( client );
 
       await svcCommand.AddModulesAsync( Assembly.GetEntryAssembly() );
@@ -60,7 +60,7 @@ namespace NerdyBot
       // Create a number to track where the prefix ends and the command begins
       int argPos = 0;
       // Determine if the message is a command, based on if it starts with '!' or a mention prefix
-      if ( !( message.HasCharPrefix( conf.Prefix, ref argPos ) || message.HasMentionPrefix( client.CurrentUser, ref argPos ) ) )
+      if ( !( message.HasCharPrefix( PREFIX, ref argPos ) || message.HasMentionPrefix( client.CurrentUser, ref argPos ) ) )
         return;
       // Create a Command Context
       var context = new CommandContext( client, message );
@@ -77,12 +77,11 @@ namespace NerdyBot
     {
       await InstallCommands();
 
-      await client.LoginAsync( TokenType.Bot, conf.Token );
+      await client.LoginAsync( TokenType.Bot, this.svcDatabase.Database.Table<Models.ModuleConfig>().First( mc => mc.Name == "base" ).ApiKey );
       await client.StartAsync();
       //await client.SetGameAsync( "Not nerdy at all" );
 
       await Task.Delay( -1 );
     }
-
   }
 }

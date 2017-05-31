@@ -1,12 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SQLite;
 
 namespace NerdyBot.Services
 {
-  class DatabaseService
+  public class DatabaseService
   {
+    private const string DBNAME = "db.db"; 
+    private SQLiteConnection db;
+
+    public SQLiteConnection Database
+    {
+      get
+      {
+        if ( this.db == null )
+          this.db = new SQLiteConnection( DBNAME );
+        return this.db;
+      }
+    }
   }
 }

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 using Discord.Commands;
 
-using NerdyBot.Config;
 using NerdyBot.Services;
 using NerdyBot.Models;
 
@@ -18,7 +17,7 @@ namespace NerdyBot.Commands
   {
     public AudioService AudioService { get; set; }
     public MessageService MessageService { get; set; }
-    private ModuleConfig<Tag> conf;
+    public DatabaseService DatabaseService { get; set; }
 
     private IEnumerable<string> KeyWords
     {
@@ -28,10 +27,10 @@ namespace NerdyBot.Commands
       }
     }
 
-    public TagCommand()
+    public TagCommand( DatabaseService databaseService )
     {
-      this.conf = new ModuleConfig<Tag>( "tag" );
-      this.conf.Read();
+      databaseService.Database.CreateTable<Tag>();
+      databaseService.Database.CreateTable<TagEntry>();
     }
 
     [Command( "create" )]
@@ -48,26 +47,32 @@ namespace NerdyBot.Commands
         tag.CreateDate = DateTime.Now;
         tag.Count = 0;
         tag.Volume = 100;
-        tag.Entries = new List<string>();
+
+        DatabaseService.Database.Insert( tag );
 
         switch ( tagType )
         {
+        case TagType.Url:
         case TagType.Text:
           AddTextToTag( tag, content );
           break;
 
         case TagType.Sound:
-          AddSoundToTag( tag, content );
-          break;
-
-        case TagType.Url:
-          AddUrlToTag( tag, content );
+          try
+          {
+            AddSoundToTag( tag, content );
+          }
+          catch ( Exception ex )
+          {
+            MessageService.Log( ex.Message, "Exception" );
+            MessageService.SendMessage( Context, $"Tag '{tagName}' konnte nicht erstellt werden!",
+              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+            DatabaseService.Database.Delete( tag );
+          }
           break;
         default:
           throw new ArgumentException( "WTF?!?!" );
         }
-        this.conf.List.Add( tag );
-        this.conf.Write();
         MessageService.Log( "finished creation", author );
         MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich erstellt!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -81,7 +86,7 @@ namespace NerdyBot.Commands
     [Command( "edit" )]
     public async Task Edit( string tagName, string editType, params string[] content )
     {
-      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = DatabaseService.Database.Table<Tag>().FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -92,22 +97,32 @@ namespace NerdyBot.Commands
           switch ( editType )
           {
           case "add":
+            bool success = true;
             switch ( tag.Type )
             {
+            case TagType.Url:
             case TagType.Text:
               AddTextToTag( tag, content );
               break;
             case TagType.Sound:
-              AddSoundToTag( tag, content );
-              break;
-            case TagType.Url:
-              AddUrlToTag( tag, content );
+              try
+              {
+                AddSoundToTag( tag, content );
+              }
+              catch ( Exception ex )
+              {
+                success = false;
+                MessageService.Log( ex.Message, "Exception" );
+                MessageService.SendMessage( Context, $"Einige Einträge konnten nicht hinzugefügt werden!",
+                  new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+              }
               break;
             default:
               throw new ArgumentException( "WTF?!?!" );
             }
-            MessageService.SendMessage( Context, $"{content.Count()} Einträge zu '{tag.Name} hinzugefügt'!",
-              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+            if ( success )
+              MessageService.SendMessage( Context, $"{content.Count()} Einträge zu '{tag.Name} hinzugefügt'!",
+                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
             break;
           case "remove":
             int remCount = RemoveTagEntry( tag, content );
@@ -118,11 +133,6 @@ namespace NerdyBot.Commands
             string newTagName = content[0].ToLower();
             if ( IsValidName( newTagName ) )
             {
-              if ( tag.Type != TagType.Text )
-              {
-                string dirName = tag.Type == TagType.Sound ? "sounds" : "pics";
-                Directory.Move( Path.Combine( dirName, tag.Name ), Path.Combine( dirName, newTagName ) );
-              }
               tag.Name = newTagName;
               MessageService.SendMessage( Context, $"Tag umbenannt in '{tag.Name}'!",
                 new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -144,7 +154,7 @@ namespace NerdyBot.Commands
               new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
             break;
           }
-          this.conf.Write();
+          DatabaseService.Database.Update( tag );
         }
         else
           MessageService.SendMessage( Context, $"Du bist zu unwichtig für diese Aktion",
@@ -155,7 +165,7 @@ namespace NerdyBot.Commands
     [Command( "list" ), Priority(10)]
     public async Task List()
     {
-      var tagsInOrder = this.conf.List.OrderBy( x => x.Name );
+      var tagsInOrder = DatabaseService.Database.Table<Tag>().OrderBy( x => x.Name );
       StringBuilder sb = new StringBuilder( "" );
       if ( tagsInOrder.Count() > 0 )
       {
@@ -171,7 +181,7 @@ namespace NerdyBot.Commands
             sb.AppendLine( "# " + lastHeader + " #" );
           }
           sb.Append( $"[{t.Name}]" );
-          sb.Append( $"({Enum.GetName( typeof( TagType ), t.Type )[0]}|{t.Entries.Count()})" );
+          sb.Append( $"({Enum.GetName( typeof( TagType ), t.Type )[0]}|{DatabaseService.Database.Table<TagEntry>().Count( te => te.TagId == t.Id)})" );
           sb.Append( ", " );
         }
         sb.Remove( sb.Length - 2, 2 );
@@ -183,26 +193,25 @@ namespace NerdyBot.Commands
     [Command( "delete" )]
     public async Task Delete( string tagName )
     {
-      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = DatabaseService.Database.Table<Tag>().FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
       else
       {
-        if ( tag.Type == TagType.Sound )
-          Directory.Delete( Path.Combine( "tag", tag.Name ), true );
-
-        this.conf.List.Remove( tag );
-        this.conf.Write();
-        MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich gelöscht!",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+        if ( DatabaseService.Database.Delete<Tag>( tag.Id ) > 0 )
+          MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich gelöscht!",
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+        else
+          MessageService.SendMessage( Context, $"Fehler beim löschen (schade)!",
+            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
       }
     }
 
     [Command( "info" )]
     public async Task Info( string tagName )
     {
-      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = DatabaseService.Database.Table<Tag>().FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -225,7 +234,7 @@ namespace NerdyBot.Commands
         sb.AppendLine( tag.Count.ToString() );
 
         sb.Append( "Anzahl Einträge: " );
-        sb.AppendLine( tag.Entries.Count.ToString() );
+        sb.AppendLine( DatabaseService.Database.Table<TagEntry>().Count( te => te.TagId == tag.Id ).ToString() );
 
         MessageService.SendMessage( Context, sb.ToString(),
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
@@ -235,7 +244,7 @@ namespace NerdyBot.Commands
     [Command( "raw" )]
     public async Task Raw( string tagName )
     {
-      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = DatabaseService.Database.Table<Tag>().FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -245,8 +254,8 @@ namespace NerdyBot.Commands
         sb.AppendLine();
         sb.AppendLine();
 
-        foreach ( string entry in tag.Entries )
-          sb.AppendLine( entry );
+        foreach ( var entry in DatabaseService.Database.Table<TagEntry>() )
+          sb.AppendLine( entry.TextContent );
 
         MessageService.SendMessage( Context, sb.ToString(),
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
@@ -263,35 +272,33 @@ namespace NerdyBot.Commands
     [Command()]
     public async Task Send( string tagName )
     {
-      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = DatabaseService.Database.Table<Tag>().FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
       else
       {
-        int idx = ( new Random() ).Next( 0, tag.Entries.Count() );
+        var tagEntries = DatabaseService.Database.Table<TagEntry>().Where( te => te.TagId == tag.Id );
+        int idx = ( new Random() ).Next( 0, tagEntries.Count() );
         switch ( tag.Type )
         {
         case TagType.Text:
-          MessageService.SendMessage( Context, tag.Entries[idx],
+          MessageService.SendMessage( Context, tagEntries.ElementAt( idx ).TextContent,
             new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
           break;
         case TagType.Sound:
           AudioService.StopPlaying = false;
-          string path = Path.Combine( "tag", tag.Name, idx + ".mp3" );
-          if ( !File.Exists( path ) )
-            await AudioService.DownloadAudio( tag.Entries[idx], path );
-          AudioService.SendAudio( Context, path, tag.Volume / 100f );
+          AudioService.SendAudio( Context, tagEntries.ElementAt( idx ).ByteContent, tag.Volume / 100f );
           break;
         case TagType.Url:
-          MessageService.SendMessage( Context, tag.Entries[idx],
+          MessageService.SendMessage( Context, tagEntries.ElementAt( idx ).TextContent,
             new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
           break;
         default:
           throw new ArgumentException( "WTF?!" );
         }
         tag.Count++;
-        this.conf.Write();
+        DatabaseService.Database.Update( tag );
       }
     }
 
@@ -347,60 +354,38 @@ namespace NerdyBot.Commands
 
     private bool IsValidName( string name )
     {
-      return !( this.conf.List.Exists( t => t.Name == name ) || KeyWords.Contains( name ) );
+      return !( DatabaseService.Database.Table<Tag>().Any( t => t.Name == name ) || KeyWords.Contains( name ) );
     }
-    private void AddTextToTag( Tag tag, string[] args )
+    private void AddTextToTag( Tag tag, string[] entries )
     {
-      string text = string.Join( " ", args );
-      tag.Entries = text.Split( new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries ).ToList();
+      foreach ( string entry in entries )
+        DatabaseService.Database.Insert( new TagEntry() { TagId = tag.Id, TextContent = entry } );
     }
-    private void AddSoundToTag( Tag tag, string[] entries )
+    private async void AddSoundToTag( Tag tag, string[] entries )
     {
       string path = Path.Combine( "tag", tag.Name );
       Directory.CreateDirectory( path );
-      int listCount = tag.Entries.Count;
 
-      for ( int i = 0; i < entries.Count(); i++ )
+      foreach ( string entry in entries )
       {
-        AudioService.DownloadAudio( entries[i], Path.Combine( path, ( listCount + i ) + ".mp3" ) );
-        tag.Entries.Add( entries[i] );
+        DatabaseService.Database.Insert( new TagEntry()
+        {
+          TagId = tag.Id,
+          TextContent = entry,
+          ByteContent = await AudioService.DownloadAudio( entry )
+        } );
       }
-    }
-    private void AddUrlToTag( Tag tag, string[] entries )
-    {
-      tag.Entries.AddRange( entries );
     }
     private int RemoveTagEntry( Tag tag, string[] entries )
     {
       int remCount = 0;
-      switch ( tag.Type )
+
+      foreach ( string entry in entries )
       {
-      case TagType.Text:
-        string text = string.Join( " ", entries );
-
-        foreach ( string entry in text.Split( new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries ) )
-          if ( tag.Entries.Remove( entry ) )
-            remCount++;
-
-        break;
-      case TagType.Sound:
-      case TagType.Url:
-        foreach( string entry in entries )
-        {
-          int idx = tag.Entries.FindIndex( s => s == entry );
-          if ( idx >= 0 )
-          {
-            tag.Entries.RemoveAt( idx );
-            remCount++;
-            if ( tag.Type == TagType.Sound )
-              File.Delete( Path.Combine( "sounds", tag.Name, idx + ".mp3" ) );
-          }
-        }
-
-        break;
-      default:
-        throw new ArgumentException( "WTF?!?!" );
+        var primkey = DatabaseService.Database.Table<TagEntry>().Where( te => te.TagId == tag.Id && te.TextContent == entry ).First().Id;
+        remCount += DatabaseService.Database.Delete<TagEntry>( primkey );
       }
+
       return remCount;
     }
   }

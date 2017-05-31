@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Discord.Commands;
 
 using NerdyBot.Services;
-using NerdyBot.Config;
+using NerdyBot.Models;
 
 namespace NerdyBot.Commands
 {
@@ -14,21 +14,18 @@ namespace NerdyBot.Commands
   public class Ball8 : ModuleBase
   {
     public MessageService MessageService { get; set; }
+    public DatabaseService DatabaseService { get; set; }
 
-    private ModuleConfig<string> conf;
-
-    public Ball8()
+    public Ball8( DatabaseService databaseService )
     {
-      this.conf = new ModuleConfig<string>( "8ball" );
-      this.conf.Read();
+      databaseService.Database.CreateTable<Ball8Answer>();
     }
 
     [Command( "add" )]
     public async Task Add( params string[] content )
     {
-      string answer = string.Join( " ", content );
-      this.conf.List.Add( answer );
-      this.conf.Write();
+      foreach ( var entry in content )
+        DatabaseService.Database.Insert( new Ball8Answer() { Answer = entry } );
     }
 
     [Command( "help" )]
@@ -39,12 +36,11 @@ namespace NerdyBot.Commands
     }
 
     [Command()]
-    public async Task Execute( params string[] question )
+    public async Task Execute( string question )
     {
-      int idx = ( new Random() ).Next( 0, this.conf.List.Count() );
-      MessageService.SendMessage( Context, Context.User.Mention + " asked: '" + string.Join( " ", question ) +
-        Environment.NewLine + Environment.NewLine +
-        "My answer is: " + this.conf.List[idx],
+      var answers = DatabaseService.Database.Table<Ball8Answer>().ToList();
+      int idx = ( new Random() ).Next( 0, answers.Count() );
+      MessageService.SendMessage( Context, $"{Context.User.Mention} asked: '{question}'{Environment.NewLine}{Environment.NewLine}" + answers[idx],
         new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
 

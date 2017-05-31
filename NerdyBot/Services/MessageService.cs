@@ -12,11 +12,8 @@ namespace NerdyBot.Services
 {
   public class MessageService
   {
-    private ulong responseChannelId;
-
-    public MessageService( DiscordSocketClient discordClient, ulong defaultResponseChannel )
+    public MessageService( DiscordSocketClient discordClient )
     {
-      responseChannelId = defaultResponseChannel;
       discordClient.Log += ClientLog;
     }
 
@@ -60,23 +57,8 @@ namespace NerdyBot.Services
           }
         }
         break;
-      case TargetType.Default:
       default:
-        {
-          var channel = await context.Guild.GetTextChannelAsync( responseChannelId );
-          if ( !options.Split && message.Length > 1990 )
-          {
-            File.WriteAllText( context.User.Id + "_raw.txt", message );
-            await channel.SendFileAsync( context.User.Id + "_raw.txt" );
-            File.Delete( context.User.Id + "_raw.txt" );
-          }
-          else
-          {
-            foreach ( string msg in ChunkMessage( message ) )
-              await channel.SendMessageAsync( FormatMessage( msg, options.MessageType, options.Hightlight ) );
-          }
-        }
-        break;
+        throw new Exception( "WTF?!!?" );
       }
     }
 
@@ -115,22 +97,12 @@ namespace NerdyBot.Services
 
   public class SendMessageOptions
   {
-    public SendMessageOptions()
-    {
-      this.TargetId = 0;
-      this.TargetType = TargetType.Default;
-      this.Split = false;
-      this.MessageType = MessageType.Normal;
-      this.Hightlight = string.Empty;
-    }
-    public static SendMessageOptions Default { get { return new SendMessageOptions(); } }
-
     public ulong TargetId { get; set; }
     public TargetType TargetType { get; set; }
     public bool Split { get; set; }
     public MessageType MessageType { get; set; }
     public string Hightlight { get; set; }
   }
-  public enum TargetType { User = 0, Channel = 1, Default = 2 }
+  public enum TargetType { User = 0, Channel = 1 }
   public enum MessageType { Block, Info, Normal }
 }

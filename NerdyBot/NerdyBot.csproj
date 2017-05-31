@@ -277,22 +277,22 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\Ball8Answer.cs" />
+    <Compile Include="Models\ModuleConfig.cs" />
+    <Compile Include="Models\ModuleRestriction.cs" />
     <Compile Include="Models\Tag.cs" />
+    <Compile Include="Models\TagEntry.cs" />
     <Compile Include="Modules\NerdyBot.Base.cs" />
     <Compile Include="Services\AudioService.cs" />
     <Compile Include="Services\DatabaseService.cs" />
     <Compile Include="Services\MessageService.cs" />
     <Compile Include="Services\ServiceProvider.cs" />
     <Compile Include="Modules\NerdyBot.8Ball.cs" />
-    <Compile Include="ModuleConfigs\NerdyBot.Config.BaseModuleConfig.cs" />
-    <Compile Include="ModuleConfigs\NerdyBot.Config.ModuleConfigTemplate.cs" />
     <Compile Include="Modules\NerdyBot.Imgur.cs" />
     <Compile Include="Modules\NerdyBot.Random.cs" />
     <Compile Include="Modules\NerdyBot.Urban.cs" />
     <Compile Include="Modules\NerdyBot.Youtube.cs" />
-    <Compile Include="ModuleConfigs\NerdyBot.Config.BaseConfig.cs" />
     <Compile Include="NerdyBot.cs" />
-    <Compile Include="ModuleConfigs\NerdyBot.Config.BotConfig.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Modules\NerdyBot.Tag.cs" />
@@ -302,7 +302,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="conf\cfg.json" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
