@@ -20,26 +20,36 @@ namespace NerdyBot.Commands
     [Command( "purge" ), Alias( "t" )]
     public async Task Purge( int count )
     {
-      Context.Channel.DeleteMessagesAsync( await Context.Channel.GetMessagesAsync( count ).First() );
+      if ( ( await Context.Guild.GetUserAsync( Context.User.Id ) ).GuildPermissions.Administrator )
+        Context.Channel.DeleteMessagesAsync( await Context.Channel.GetMessagesAsync( count ).First() );
+      else
+        MessageService.Log( "Accesspermission Violation attempt", Context.User.ToString() );
     }
 
     [Command( "stop" )]
     public async Task StopPlaying()
     {
-      this.AudioService.StopPlaying = true;
+      AudioService.StopPlaying = true;
     }
 
     [Command( "leave" )]
     public async Task LeaveChannel()
     {
-      this.AudioService.LeaveChannel();
+      await AudioService.LeaveChannel();
     }
 
     [Command( "exit" )]
     public async Task Exit()
     {
       if ( Context.Guild.GetUserAsync( Context.User.Id ).Result.GuildPermissions.Administrator )
-        Client.StopAsync();
+      {
+        await Context.Message.DeleteAsync();
+        await Client.StopAsync();
+        //TODO safe consoleoutput to file
+        Environment.Exit( 0 );
+      }
+      else
+        MessageService.Log( "Accesspermission Violation attempt", Context.User.ToString() );
     }
     
     [Command( "help" )]

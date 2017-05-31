@@ -30,6 +30,8 @@ namespace NerdyBot
       this.svcAudio = new AudioService( svcMessage );
       this.svcDatabase = new DatabaseService();
 
+      this.client.Ready += ClientReady;
+
       this.svcDatabase.Database.CreateTable<ModuleConfig>();
       if ( !this.svcDatabase.Database.Table<ModuleConfig>().Any( mc => mc.Name == "base" ) )
         this.svcDatabase.Database.Insert( new ModuleConfig() { Name = "base", ApiKey = "INSERT DISCORD TOKEN HERE" } ); //TODO
@@ -67,6 +69,9 @@ namespace NerdyBot
         return;
       // Create a Command Context
       var context = new CommandContext( client, message );
+
+      await svcMessage.Log( context.Message.Content, context.User.ToString() );
+
       // Execute the command. (result does not indicate a return value, 
       // rather an object stating if the command executed succesfully)
       var result = await svcCommand.ExecuteAsync( context, argPos, svcProvider );
@@ -82,7 +87,6 @@ namespace NerdyBot
 
       await client.LoginAsync( TokenType.Bot, this.svcDatabase.Database.Table<Models.ModuleConfig>().First( mc => mc.Name == "base" ).ApiKey );
       await client.StartAsync();
-      //await client.SetGameAsync( "Not nerdy at all" );
 
       await Task.Delay( -1 );
     }

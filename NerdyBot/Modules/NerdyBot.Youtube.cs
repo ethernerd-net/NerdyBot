@@ -2,11 +2,11 @@
 using System.Text;
 using System.Threading.Tasks;
 
+using Discord.Commands;
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 
 using NerdyBot.Services;
-using Discord.Commands;
 using NerdyBot.Models;
 
 namespace NerdyBot.Commands
@@ -29,12 +29,12 @@ namespace NerdyBot.Commands
     {
       var youtubeService = new YouTubeService( new BaseClientService.Initializer()
       {
-        ApiKey = DatabaseService.Database.Table<ModuleConfig>().First( mc => mc.Name == "youtube" ).ApiKey,
-        ApplicationName = "NerdyBot"
+        ApiKey = DatabaseService.Database.Table<ModuleConfig>().First( mc => mc.Name == MODULENAME ).ApiKey,
+        ApplicationName = "NerdyBot" //TODO
       } );
 
       var searchListRequest = youtubeService.Search.List( "snippet" );
-      searchListRequest.Q = string.Join( " ", query ); // Replace with your search term.
+      searchListRequest.Q = query;
       searchListRequest.MaxResults = 1;
       searchListRequest.Type = "video";
       searchListRequest.Order = SearchResource.ListRequest.OrderEnum.ViewCount;
@@ -42,7 +42,7 @@ namespace NerdyBot.Commands
       var searchListResponse = await searchListRequest.ExecuteAsync();
       var responseItem = searchListResponse.Items.FirstOrDefault( item => item.Id.Kind == "youtube#video" );
       if ( responseItem != null )
-        MessageService.SendMessage( Context, "https://www.youtube.com/watch?v=" + responseItem.Id.VideoId,
+        MessageService.SendMessage( Context, $"https://www.youtube.com/watch?v={responseItem.Id.VideoId}",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
       else
         MessageService.SendMessage( Context, "Und ich dachte es gibt alles auf youtube",

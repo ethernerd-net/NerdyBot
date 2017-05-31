@@ -22,7 +22,7 @@ namespace NerdyBot.Services
       Console.WriteLine( arg.ToString() );
     }
 
-    public async void SendMessage( ICommandContext context, string message, SendMessageOptions options )
+    public async Task SendMessage( ICommandContext context, string message, SendMessageOptions options )
     {
       switch ( options.TargetType )
       {
@@ -67,13 +67,33 @@ namespace NerdyBot.Services
       await ClientLog( new LogMessage( logLevel, source, text ) );
     }
 
-    private readonly int chunkSize = 1990;
+    private readonly int chunkSize = 1950;
     private IEnumerable<string> ChunkMessage( string str )
     {
-      if ( str.Length > chunkSize )
-        return Enumerable.Range( 0, (int)Math.Ceiling( (double)str.Length / ( double )chunkSize ) )
-          .Select( i => str.Substring( i * chunkSize, ( i * chunkSize + chunkSize > str.Length ? str.Length - i * chunkSize : chunkSize ) ) );
-      return new string[] { str };
+      if ( str.Length <= chunkSize )
+        return new string[] { str };
+      else
+      {
+        var lines = str.Split( new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries );
+        if ( lines.Count() > 1 )
+        {
+          var chunkendText = new List<string>();
+          string chunk = string.Empty;
+          foreach ( var line in lines )
+            if ( chunk.Length + line.Length > chunkSize )
+            {
+              chunkendText.Add( chunk );
+              chunk = line + Environment.NewLine;
+            }
+            else
+              chunk += line + Environment.NewLine;
+          chunkendText.Add( chunk );
+          return chunkendText;
+        }
+        else
+          return Enumerable.Range( 0, ( int )Math.Ceiling( ( double )str.Length / ( double )chunkSize ) )
+            .Select( i => str.Substring( i * chunkSize, ( i * chunkSize + chunkSize > str.Length ? str.Length - i * chunkSize : chunkSize ) ) );
+      }
     }
     private string FormatMessage( string message, MessageType format, string highlight )
     {

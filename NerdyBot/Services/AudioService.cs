@@ -13,8 +13,11 @@ namespace NerdyBot.Services
 {
   public class AudioService
   {
-    //private ulong lastChannel = 0;
+    private ulong lastChannel = 0;
     private IAudioClient audioClient;
+    private AudioOutStream discordStream;
+
+
     private MessageService svcMessage;
     private object playing = new object();
 
@@ -44,18 +47,21 @@ namespace NerdyBot.Services
       if ( channel != null )
       {
         //this.svcMessage.Log( "playing " + Path.GetDirectoryName( localPath ), context.User.ToString() );
-        /*if ( lastChannel != channel.Id )
+        if ( lastChannel != channel.Id )
         {
           lastChannel = channel.Id;
-        }*/
-        audioClient = await channel.ConnectAsync();
+          audioClient = await channel.ConnectAsync();
+
+          if ( discordStream != null )
+            discordStream.Dispose();
+          discordStream = audioClient.CreatePCMStream( AudioApplication.Mixed );
+        }
 
         lock ( playing )
         {
           try
           {
             var OutFormat = new WaveFormat( 48000, 16, 2 ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
-            using ( var discord = audioClient.CreatePCMStream( AudioApplication.Mixed ) )
             using ( var mp3Reader = new Mp3FileReader( new MemoryStream( audio ) ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
             using ( var resampler = new MediaFoundationResampler( mp3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
             {
@@ -72,8 +78,8 @@ namespace NerdyBot.Services
                   for ( int i = byteCount; i < blockSize; i++ )
                     buffer[i] = 0;
                 }
-                discord.Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
-                discord.FlushAsync();
+                discordStream.Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
+                discordStream.FlushAsync();
               }
             }
           }
