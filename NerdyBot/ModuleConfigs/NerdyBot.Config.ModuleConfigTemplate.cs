@@ -1,16 +1,16 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace NerdyBot.Config
 {
-  public class ModuleConfig<T> : BaseModuleConfig where T : new()
+  public class ModuleConfig<T> : BaseModuleConfig
   {
     public ModuleConfig( string key/*, IEnumerable<string> aliases*/ )
       : base( key/*, aliases*/ )
     {
-      this.Ext = new T();
     }
 
-    public T Ext { get; set; }
+    public List<T> List { get; set; }
 
     protected override dynamic Parse( string json )
     {
@@ -19,7 +19,7 @@ namespace NerdyBot.Config
     protected override void Assign( dynamic conf )
     {
       base.Assign( conf as BaseModuleConfig );
-      this.Ext = conf.Ext;
+      this.List = conf.List;
     }
   }
 }

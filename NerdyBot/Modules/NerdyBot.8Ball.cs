@@ -15,11 +15,11 @@ namespace NerdyBot.Commands
   {
     public MessageService MessageService { get; set; }
 
-    private ModuleConfig<Ball8Config> conf;
+    private ModuleConfig<string> conf;
 
     public Ball8()
     {
-      this.conf = new ModuleConfig<Ball8Config>( "8ball" );
+      this.conf = new ModuleConfig<string>( "8ball" );
       this.conf.Read();
     }
 
@@ -27,7 +27,7 @@ namespace NerdyBot.Commands
     public async Task Add( params string[] content )
     {
       string answer = string.Join( " ", content );
-      this.conf.Ext.Items.Add( answer );
+      this.conf.List.Add( answer );
       this.conf.Write();
     }
 
@@ -41,10 +41,10 @@ namespace NerdyBot.Commands
     [Command()]
     public async Task Execute( params string[] question )
     {
-      int idx = ( new Random() ).Next( 0, this.conf.Ext.Items.Count() );
+      int idx = ( new Random() ).Next( 0, this.conf.List.Count() );
       MessageService.SendMessage( Context, Context.User.Mention + " asked: '" + string.Join( " ", question ) +
         Environment.NewLine + Environment.NewLine +
-        "My answer is: " + this.conf.Ext.Items[idx],
+        "My answer is: " + this.conf.List[idx],
         new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
     }
 

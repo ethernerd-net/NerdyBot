@@ -9,6 +9,7 @@ using Discord.Commands;
 
 using NerdyBot.Config;
 using NerdyBot.Services;
+using NerdyBot.Models;
 
 namespace NerdyBot.Commands
 {
@@ -17,7 +18,7 @@ namespace NerdyBot.Commands
   {
     public AudioService AudioService { get; set; }
     public MessageService MessageService { get; set; }
-    private ModuleConfig<TagConfig> conf;
+    private ModuleConfig<Tag> conf;
 
     private IEnumerable<string> KeyWords
     {
@@ -29,7 +30,7 @@ namespace NerdyBot.Commands
 
     public TagCommand()
     {
-      this.conf = new ModuleConfig<TagConfig>( "tag" );
+      this.conf = new ModuleConfig<Tag>( "tag" );
       this.conf.Read();
     }
 
@@ -65,7 +66,7 @@ namespace NerdyBot.Commands
         default:
           throw new ArgumentException( "WTF?!?!" );
         }
-        this.conf.Ext.Tags.Add( tag );
+        this.conf.List.Add( tag );
         this.conf.Write();
         MessageService.Log( "finished creation", author );
         MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich erstellt!",
@@ -80,7 +81,7 @@ namespace NerdyBot.Commands
     [Command( "edit" )]
     public async Task Edit( string tagName, string editType, params string[] content )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -117,9 +118,9 @@ namespace NerdyBot.Commands
             string newTagName = content[0].ToLower();
             if ( IsValidName( newTagName ) )
             {
-              if ( tag.Type != Config.TagType.Text )
+              if ( tag.Type != TagType.Text )
               {
-                string dirName = tag.Type == Config.TagType.Sound ? "sounds" : "pics";
+                string dirName = tag.Type == TagType.Sound ? "sounds" : "pics";
                 Directory.Move( Path.Combine( dirName, tag.Name ), Path.Combine( dirName, newTagName ) );
               }
               tag.Name = newTagName;
@@ -154,7 +155,7 @@ namespace NerdyBot.Commands
     [Command( "list" ), Priority(10)]
     public async Task List()
     {
-      var tagsInOrder = this.conf.Ext.Tags.OrderBy( x => x.Name );
+      var tagsInOrder = this.conf.List.OrderBy( x => x.Name );
       StringBuilder sb = new StringBuilder( "" );
       if ( tagsInOrder.Count() > 0 )
       {
@@ -169,8 +170,8 @@ namespace NerdyBot.Commands
             sb.AppendLine();
             sb.AppendLine( "# " + lastHeader + " #" );
           }
-          sb.Append( "[" + t.Name + "]" );
-          sb.Append( "(" + Enum.GetName( typeof( TagType ), t.Type )[0] + "|" + t.Entries.Count() + ")" );
+          sb.Append( $"[{t.Name}]" );
+          sb.Append( $"({Enum.GetName( typeof( TagType ), t.Type )[0]}|{t.Entries.Count()})" );
           sb.Append( ", " );
         }
         sb.Remove( sb.Length - 2, 2 );
@@ -182,16 +183,16 @@ namespace NerdyBot.Commands
     [Command( "delete" )]
     public async Task Delete( string tagName )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
       else
       {
-        if ( tag.Type == Config.TagType.Sound )
+        if ( tag.Type == TagType.Sound )
           Directory.Delete( Path.Combine( "tag", tag.Name ), true );
 
-        this.conf.Ext.Tags.Remove( tag );
+        this.conf.List.Remove( tag );
         this.conf.Write();
         MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich gelöscht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -201,13 +202,13 @@ namespace NerdyBot.Commands
     [Command( "info" )]
     public async Task Info( string tagName )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
       else
       {
-        StringBuilder sb = new StringBuilder( "==== " + tag.Name + " =====" );
+        StringBuilder sb = new StringBuilder( $"==== {tag.Name} =====" );
         sb.AppendLine();
         sb.AppendLine();
 
@@ -215,7 +216,7 @@ namespace NerdyBot.Commands
         sb.AppendLine( tag.Author );
 
         sb.Append( "Typ: " );
-        sb.AppendLine( Enum.GetName( typeof( Config.TagType ), tag.Type ) );
+        sb.AppendLine( Enum.GetName( typeof( TagType ), tag.Type ) );
 
         sb.Append( "Erstellungs Datum: " );
         sb.AppendLine( tag.CreateDate.ToLongDateString() );
@@ -234,7 +235,7 @@ namespace NerdyBot.Commands
     [Command( "raw" )]
     public async Task Raw( string tagName )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -262,7 +263,7 @@ namespace NerdyBot.Commands
     [Command()]
     public async Task Send( string tagName )
     {
-      var tag = this.conf.Ext.Tags.FirstOrDefault( t => t.Name == tagName.ToLower() );
+      var tag = this.conf.List.FirstOrDefault( t => t.Name == tagName.ToLower() );
       if ( tag == null )
         MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
           new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
@@ -346,41 +347,36 @@ namespace NerdyBot.Commands
 
     private bool IsValidName( string name )
     {
-      return !( this.conf.Ext.Tags.Exists( t => t.Name == name ) || KeyWords.Contains( name ) );
+      return !( this.conf.List.Exists( t => t.Name == name ) || KeyWords.Contains( name ) );
     }
     private void AddTextToTag( Tag tag, string[] args )
     {
-      string text = string.Empty;
-      for ( int i = 0; i < args.Count(); i++ )
-        text += " " + args[i];
-
+      string text = string.Join( " ", args );
       tag.Entries = text.Split( new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries ).ToList();
     }
-    private void AddSoundToTag( Tag tag, string[] args )
+    private void AddSoundToTag( Tag tag, string[] entries )
     {
       string path = Path.Combine( "tag", tag.Name );
       Directory.CreateDirectory( path );
       int listCount = tag.Entries.Count;
 
-      for ( int i = 0; i < args.Count(); i++ )
+      for ( int i = 0; i < entries.Count(); i++ )
       {
-        AudioService.DownloadAudio( args[i], Path.Combine( path, ( listCount + i ) + ".mp3" ) );
-        tag.Entries.Add( args[i] );
+        AudioService.DownloadAudio( entries[i], Path.Combine( path, ( listCount + i ) + ".mp3" ) );
+        tag.Entries.Add( entries[i] );
       }
     }
-    private void AddUrlToTag( Tag tag, string[] args )
+    private void AddUrlToTag( Tag tag, string[] entries )
     {
-      tag.Entries.AddRange( args );
+      tag.Entries.AddRange( entries );
     }
-    private int RemoveTagEntry( Tag tag, string[] args )
+    private int RemoveTagEntry( Tag tag, string[] entries )
     {
       int remCount = 0;
       switch ( tag.Type )
       {
       case TagType.Text:
-        string text = string.Empty;
-        for ( int i = 0; i < args.Count(); i++ )
-          text += " " + args[i];
+        string text = string.Join( " ", entries );
 
         foreach ( string entry in text.Split( new string[] { ";;" }, StringSplitOptions.RemoveEmptyEntries ) )
           if ( tag.Entries.Remove( entry ) )
@@ -389,9 +385,9 @@ namespace NerdyBot.Commands
         break;
       case TagType.Sound:
       case TagType.Url:
-        for ( int i = 0; i < args.Count(); i++ )
+        foreach( string entry in entries )
         {
-          int idx = tag.Entries.FindIndex( s => s == args[i] );
+          int idx = tag.Entries.FindIndex( s => s == entry );
           if ( idx >= 0 )
           {
             tag.Entries.RemoveAt( idx );
