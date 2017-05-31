@@ -8,7 +8,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 
 using NerdyBot.Services;
-
+using NerdyBot.Models;
 
 namespace NerdyBot
 {
@@ -25,11 +25,14 @@ namespace NerdyBot
     private MessageService svcMessage;
     
     internal NerdyBot()
-    {
-      
+    {      
       this.svcMessage = new MessageService( this.client );
       this.svcAudio = new AudioService( svcMessage );
       this.svcDatabase = new DatabaseService();
+
+      this.svcDatabase.Database.CreateTable<ModuleConfig>();
+      if ( this.svcDatabase.Database.Table<ModuleConfig>().Any( mc => mc.Name == "base" ) )
+        this.svcDatabase.Database.Insert( new ModuleConfig() { Name = "base", ApiKey = "INSERT DISCORD TOKEN HERE" } ); //TODO
     }
 
     private async Task ClientReady()

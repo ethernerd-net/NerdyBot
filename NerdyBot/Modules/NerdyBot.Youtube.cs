@@ -14,8 +14,15 @@ namespace NerdyBot.Commands
   [Group( "youtube" ), Alias( "yt" )]
   public class YoutubeCommand : ModuleBase
   {
+    private const string MODULENAME = "youtube";
     public DatabaseService DatabaseService { get; set; }
     public MessageService MessageService { get; set; }
+
+    public YoutubeCommand( DatabaseService databaseService )
+    {
+      if ( databaseService.Database.Table<ModuleConfig>().Any( mc => mc.Name == MODULENAME ) )
+        databaseService.Database.Insert( new ModuleConfig() { Name = MODULENAME, ApiKey = "INSERT YOUTUBE TOKEN HERE" } ); //TODO
+    }
 
     [Command()]
     public async Task Execute( string query )
