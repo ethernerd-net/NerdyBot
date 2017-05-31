@@ -20,7 +20,7 @@ namespace NerdyBot.Commands
 
     public YoutubeCommand( DatabaseService databaseService )
     {
-      if ( databaseService.Database.Table<ModuleConfig>().Any( mc => mc.Name == MODULENAME ) )
+      if ( !databaseService.Database.Table<ModuleConfig>().Any( mc => mc.Name == MODULENAME ) )
         databaseService.Database.Insert( new ModuleConfig() { Name = MODULENAME, ApiKey = "INSERT YOUTUBE TOKEN HERE" } ); //TODO
     }
 

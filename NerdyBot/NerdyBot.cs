@@ -31,7 +31,7 @@ namespace NerdyBot
       this.svcDatabase = new DatabaseService();
 
       this.svcDatabase.Database.CreateTable<ModuleConfig>();
-      if ( this.svcDatabase.Database.Table<ModuleConfig>().Any( mc => mc.Name == "base" ) )
+      if ( !this.svcDatabase.Database.Table<ModuleConfig>().Any( mc => mc.Name == "base" ) )
         this.svcDatabase.Database.Insert( new ModuleConfig() { Name = "base", ApiKey = "INSERT DISCORD TOKEN HERE" } ); //TODO
     }
 
