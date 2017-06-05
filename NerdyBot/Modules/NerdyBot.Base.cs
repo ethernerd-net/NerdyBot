@@ -29,13 +29,13 @@ namespace NerdyBot.Commands
     [Command( "stop" )]
     public async Task StopPlaying()
     {
-      AudioService.StopPlaying = true;
+      AudioService.Playing[Context.Guild.Id] = false;
     }
 
     [Command( "leave" )]
     public async Task LeaveChannel()
     {
-      await AudioService.LeaveChannel();
+      await AudioService.LeaveChannel( Context.Guild.Id );
     }
 
     [Command( "exit" )]

@@ -39,7 +39,9 @@ namespace NerdyBot
 
     private async Task ClientReady()
     {
-      await client.SetGameAsync( "Not nerdy at all" );
+      //await client.SetGameAsync( "Not nerdy at all" );
+      foreach ( var guild in this.client.Guilds )
+        this.svcAudio.AddGuild( guild.Id );
     }
 
     private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "purge", "leave", "join", "backup" };

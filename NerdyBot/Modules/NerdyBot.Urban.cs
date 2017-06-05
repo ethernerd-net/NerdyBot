@@ -37,7 +37,6 @@ namespace NerdyBot.Commands
         {
           try
           {
-            AudioService.StopPlaying = false;
             var audioBytes = await AudioService.DownloadAudio( urban.sounds.First() );
             AudioService.SendAudio( Context, audioBytes );
           }

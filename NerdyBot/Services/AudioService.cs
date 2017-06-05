@@ -8,25 +8,27 @@ using System.Threading.Tasks;
 using NAudio.Wave;
 using Discord.Audio;
 using Discord.Commands;
+using System.Collections.Generic;
 
 namespace NerdyBot.Services
 {
   public class AudioService
   {
-    private ulong lastChannel = 0;
-    private IAudioClient audioClient;
-    private AudioOutStream discordStream;
+    private Dictionary<ulong, bool> playing = new Dictionary<ulong, bool>();
+    private Dictionary<ulong, object> locks = new Dictionary<ulong, object>();
+    private Dictionary<ulong, ulong> lastChannels = new Dictionary<ulong, ulong>();
+    private Dictionary<ulong, IAudioClient> audioClients = new Dictionary<ulong, IAudioClient>();
+    private Dictionary<ulong, AudioOutStream> audioStreams = new Dictionary<ulong, AudioOutStream>();
 
 
     private MessageService svcMessage;
-    private object playing = new object();
 
     public AudioService( MessageService svcMessage )
     {
       this.svcMessage = svcMessage;
     }
 
-    public bool StopPlaying { get; set; }
+    public IDictionary<ulong, bool> Playing { get { return this.playing; } }
     public async Task<byte[]> DownloadAudio( string url )
     {
       string dlFilePath = Download( url );
@@ -47,18 +49,19 @@ namespace NerdyBot.Services
       if ( channel != null )
       {
         //this.svcMessage.Log( "playing " + Path.GetDirectoryName( localPath ), context.User.ToString() );
-        if ( lastChannel != channel.Id )
+        if ( lastChannels[context.Guild.Id] != channel.Id )
         {
-          lastChannel = channel.Id;
-          audioClient = await channel.ConnectAsync();
+          lastChannels[context.Guild.Id] = channel.Id;
+          audioClients[context.Guild.Id] = await channel.ConnectAsync();
 
-          if ( discordStream != null )
-            discordStream.Dispose();
-          discordStream = audioClient.CreatePCMStream( AudioApplication.Mixed );
+          if ( audioStreams[context.Guild.Id] != null )
+            audioStreams[context.Guild.Id].Dispose();
+          audioStreams[context.Guild.Id] = audioClients[context.Guild.Id].CreatePCMStream( AudioApplication.Mixed );
         }
 
-        lock ( playing )
+        lock ( locks[context.Guild.Id] )
         {
+          this.playing[context.Guild.Id] = true;
           try
           {
             var OutFormat = new WaveFormat( 48000, 16, 2 ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
@@ -70,7 +73,7 @@ namespace NerdyBot.Services
               byte[] buffer = new byte[blockSize];
               int byteCount;
 
-              while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && !StopPlaying ) // Read audio into our buffer, and keep a loop open while data is present
+              while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && this.playing[context.Guild.Id] ) // Read audio into our buffer, and keep a loop open while data is present
               {
                 if ( byteCount < blockSize )
                 {
@@ -78,8 +81,8 @@ namespace NerdyBot.Services
                   for ( int i = byteCount; i < blockSize; i++ )
                     buffer[i] = 0;
                 }
-                discordStream.Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
-                discordStream.FlushAsync();
+                audioStreams[context.Guild.Id].Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
+                audioStreams[context.Guild.Id].FlushAsync();
               }
             }
           }
@@ -87,15 +90,23 @@ namespace NerdyBot.Services
           {
             this.svcMessage.Log( ex.Message, "Exception", Discord.LogSeverity.Error );
           }
-          StopPlaying = false;
+          this.playing[context.Guild.Id] = false;
         }
       }
     }
 
-    public async Task LeaveChannel()
+    public async Task LeaveChannel( ulong guildId )
     {
-      if ( this.audioClient != null )
-        await this.audioClient.StopAsync();
+      if ( this.audioClients[guildId] != null )
+        await this.audioClients[guildId].StopAsync();
+    }
+    public void AddGuild( ulong id )
+    {
+      this.audioStreams.Add( id, null );
+      this.audioClients.Add( id, null );
+      this.locks.Add( id, new object() );
+      this.lastChannels.Add( id, 0 );
+      this.playing.Add( id, false );
     }
 
 
