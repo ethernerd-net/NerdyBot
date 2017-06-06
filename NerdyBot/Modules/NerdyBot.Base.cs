@@ -8,11 +8,13 @@ using Discord.Commands;
 using Discord.WebSocket;
 
 using NerdyBot.Services;
+using NerdyBot.Models;
 
 namespace NerdyBot.Modules
 {
   public class NerdyBotBase : ModuleBase
   {
+    public BotConfig BotConfig { get; set; }
     public AudioService AudioService { get; set; }
     public MessageService MessageService { get; set; }
     public DiscordSocketClient Client { get; set; }
@@ -21,13 +23,13 @@ namespace NerdyBot.Modules
     public async Task Purge( int count )
     {
       if ( ( await Context.Guild.GetUserAsync( Context.User.Id ) ).GuildPermissions.Administrator )
-        Context.Channel.DeleteMessagesAsync( await Context.Channel.GetMessagesAsync( count ).First() );
+        await Context.Channel.DeleteMessagesAsync( await Context.Channel.GetMessagesAsync( count ).First() );
       else
-        MessageService.Log( "Accesspermission Violation attempt", Context.User.ToString() );
+        await MessageService.Log( "Accesspermission Violation attempt", Context.User.ToString() );
     }
 
     [Command( "stop" )]
-    public async Task StopPlaying()
+    public void StopPlaying()
     {
       AudioService.Playing[Context.Guild.Id] = false;
     }
@@ -38,18 +40,21 @@ namespace NerdyBot.Modules
       await AudioService.LeaveChannel( Context.Guild.Id );
     }
 
+    public async Task JoinChannel()
+    {
+      await AudioService.JoinChannel( Context );
+    }
+
     [Command( "exit" )]
     public async Task Exit()
     {
-      if ( Context.Guild.GetUserAsync( Context.User.Id ).Result.GuildPermissions.Administrator )
+      if ( Context.User.Id == BotConfig.AdminUserId )
       {
         await Context.Message.DeleteAsync();
         await Client.StopAsync();
         //TODO safe consoleoutput to file
-        Environment.Exit( 0 );
+        //Environment.Exit( 0 );
       }
-      else
-        MessageService.Log( "Accesspermission Violation attempt", Context.User.ToString() );
     }
     
     [Command( "help" )]
@@ -68,7 +73,7 @@ namespace NerdyBot.Modules
            sb.AppendLine();
          }
        }
-       MessageService.SendMessage( Context, sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, Split = true, MessageType = MessageType.Block } );
+       await MessageService.SendMessage( Context, sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, Split = true, MessageType = MessageType.Info } );
      }
   }
 }

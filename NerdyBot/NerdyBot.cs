@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -41,7 +40,8 @@ namespace NerdyBot
 
     private async Task ClientReady()
     {
-      //await client.SetGameAsync( "Not nerdy at all" );
+      await Task.Delay( 2000 );
+      await client.SetGameAsync( "Not nerdy at all" );
       foreach ( var guild in this.client.Guilds )
         this.svcAudio.AddGuild( guild.Id );
     }
@@ -50,7 +50,7 @@ namespace NerdyBot
     
     private async Task InstallCommands()
     {
-      client.MessageReceived += HandleCommand;
+      this.client.MessageReceived += HandleCommand;
 
       svcProvider.AddService( svcAudio );
       svcProvider.AddService( svcMessage );

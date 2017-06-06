@@ -258,6 +258,7 @@
       <HintPath>..\packages\System.Threading.ThreadPool.4.3.0\lib\net46\System.Threading.ThreadPool.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -280,8 +281,8 @@
     <Compile Include="Models\Ball8Answer.cs" />
     <Compile Include="Models\BotConfig.cs" />
     <Compile Include="Models\ModuleRestriction.cs" />
-    <Compile Include="Models\MusicQueue.cs" />
-    <Compile Include="Models\MusicQueueEntry.cs" />
+    <Compile Include="Models\MusicPlaylist.cs" />
+    <Compile Include="Models\MusicPlaylistEntry.cs" />
     <Compile Include="Models\Tag.cs" />
     <Compile Include="Models\TagEntry.cs" />
     <Compile Include="Modules\NerdyBot.Base.cs" />

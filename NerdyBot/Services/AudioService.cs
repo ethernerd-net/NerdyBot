@@ -9,16 +9,17 @@ using NAudio.Wave;
 using Discord.Audio;
 using Discord.Commands;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace NerdyBot.Services
 {
   public class AudioService
   {
-    private Dictionary<ulong, bool> playing = new Dictionary<ulong, bool>();
-    private Dictionary<ulong, object> locks = new Dictionary<ulong, object>();
-    private Dictionary<ulong, ulong> lastChannels = new Dictionary<ulong, ulong>();
-    private Dictionary<ulong, IAudioClient> audioClients = new Dictionary<ulong, IAudioClient>();
-    private Dictionary<ulong, AudioOutStream> audioStreams = new Dictionary<ulong, AudioOutStream>();
+    private ConcurrentDictionary<ulong, bool> playing = new ConcurrentDictionary<ulong, bool>();
+    private ConcurrentDictionary<ulong, object> locks = new ConcurrentDictionary<ulong, object>();
+    private ConcurrentDictionary<ulong, ulong> lastChannels = new ConcurrentDictionary<ulong, ulong>();
+    private ConcurrentDictionary<ulong, IAudioClient> audioClients = new ConcurrentDictionary<ulong, IAudioClient>();
+    private ConcurrentDictionary<ulong, AudioOutStream> audioStreams = new ConcurrentDictionary<ulong, AudioOutStream>();
 
 
     private MessageService svcMessage;
@@ -44,6 +45,50 @@ namespace NerdyBot.Services
     }
     public async Task SendAudio( ICommandContext context, byte[] audio, float volume = 1f )
     {
+      await JoinChannel( context );
+
+      lock ( locks[context.Guild.Id] )
+      {
+        this.playing[context.Guild.Id] = true;
+        try
+        {
+          var OutFormat = new WaveFormat( 48000, 16, 2 ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
+          using ( var mp3Reader = new Mp3FileReader( new MemoryStream( audio ) ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
+          using ( var resampler = new MediaFoundationResampler( mp3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
+          {
+            resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
+            int blockSize = OutFormat.AverageBytesPerSecond / 50; // Establish the size of our AudioBuffer
+            byte[] buffer = new byte[blockSize];
+            int byteCount;
+
+            while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && this.playing[context.Guild.Id] ) // Read audio into our buffer, and keep a loop open while data is present
+            {
+              if ( byteCount < blockSize )
+              {
+                // Incomplete Frame
+                for ( int i = byteCount; i < blockSize; i++ )
+                  buffer[i] = 0;
+              }
+              audioStreams[context.Guild.Id].Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
+              audioStreams[context.Guild.Id].FlushAsync();
+            }
+          }
+        }
+        catch ( Exception ex )
+        {
+          this.svcMessage.Log( ex.Message, "Exception", Discord.LogSeverity.Error );
+        }
+        this.playing[context.Guild.Id] = false;
+      }
+    }
+
+    public async Task LeaveChannel( ulong guildId )
+    {
+      if ( this.audioClients[guildId] != null )
+        await this.audioClients[guildId].StopAsync();
+    }
+    public async Task JoinChannel( ICommandContext context )
+    {
       var channel = context.Guild.GetVoiceChannelsAsync().Result.FirstOrDefault( vc => vc.GetUserAsync( context.User.Id ).Result != null );
 
       if ( channel != null )
@@ -58,55 +103,15 @@ namespace NerdyBot.Services
             audioStreams[context.Guild.Id].Dispose();
           audioStreams[context.Guild.Id] = audioClients[context.Guild.Id].CreatePCMStream( AudioApplication.Mixed );
         }
-
-        lock ( locks[context.Guild.Id] )
-        {
-          this.playing[context.Guild.Id] = true;
-          try
-          {
-            var OutFormat = new WaveFormat( 48000, 16, 2 ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
-            using ( var mp3Reader = new Mp3FileReader( new MemoryStream( audio ) ) ) // Create a new Disposable MP3FileReader, to read audio from the filePath parameter
-            using ( var resampler = new MediaFoundationResampler( mp3Reader, OutFormat ) ) // Create a Disposable Resampler, which will convert the read MP3 data to PCM, using our Output Format
-            {
-              resampler.ResamplerQuality = 60; // Set the quality of the resampler to 60, the highest quality
-              int blockSize = OutFormat.AverageBytesPerSecond / 50; // Establish the size of our AudioBuffer
-              byte[] buffer = new byte[blockSize];
-              int byteCount;
-
-              while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && this.playing[context.Guild.Id] ) // Read audio into our buffer, and keep a loop open while data is present
-              {
-                if ( byteCount < blockSize )
-                {
-                  // Incomplete Frame
-                  for ( int i = byteCount; i < blockSize; i++ )
-                    buffer[i] = 0;
-                }
-                audioStreams[context.Guild.Id].Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
-                audioStreams[context.Guild.Id].FlushAsync();
-              }
-            }
-          }
-          catch ( Exception ex )
-          {
-            this.svcMessage.Log( ex.Message, "Exception", Discord.LogSeverity.Error );
-          }
-          this.playing[context.Guild.Id] = false;
-        }
       }
-    }
-
-    public async Task LeaveChannel( ulong guildId )
-    {
-      if ( this.audioClients[guildId] != null )
-        await this.audioClients[guildId].StopAsync();
     }
     public void AddGuild( ulong id )
     {
-      this.audioStreams.Add( id, null );
-      this.audioClients.Add( id, null );
-      this.locks.Add( id, new object() );
-      this.lastChannels.Add( id, 0 );
-      this.playing.Add( id, false );
+      this.audioStreams.TryAdd( id, null );
+      this.audioClients.TryAdd( id, null );
+      this.locks.TryAdd( id, new object() );
+      this.lastChannels.TryAdd( id, 0 );
+      this.playing.TryAdd( id, false );
     }
 
 

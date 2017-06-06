@@ -7,5 +7,6 @@
     public string YoutubeAPIKey { get; set; }
     public string ImgurClientId { get; set; }
     public string GeniusAccessToken { get; set; }
+    public ulong AdminUserId { get; set; }
   }
 }

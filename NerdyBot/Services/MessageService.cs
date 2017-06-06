@@ -124,5 +124,5 @@ namespace NerdyBot.Services
     public string Hightlight { get; set; }
   }
   public enum TargetType { User = 0, Channel = 1 }
-  public enum MessageType { Block, Info, Normal }
+  public enum MessageType { Normal, Block, Info }
 }

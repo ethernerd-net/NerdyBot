@@ -1,11 +1,10 @@
-﻿using Discord.Commands;
+﻿using System;
+using System.Threading.Tasks;
+
+using Discord.Commands;
+
 using NerdyBot.Models;
 using NerdyBot.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NerdyBot.Modules
 {
@@ -18,20 +17,55 @@ namespace NerdyBot.Modules
 
     public Music( DatabaseService databaseService )
     {
-      databaseService.Database.CreateTable<MusicQueue>();
-      databaseService.Database.CreateTable<MusicQueueEntry>();
+      databaseService.Database.CreateTable<MusicPlaylist>();
+      databaseService.Database.CreateTable<MusicPlaylistEntry>();
     }
 
-    [Command("play")]
+    [Group("playlist"), Alias("pl")]
+    public class MusicPlaylist : ModuleBase
+    {
+      [Command( "play" )]
+      public async Task Play()
+      {
+        throw new NotImplementedException();
+      }
+      [Command( "create" )]
+      public async Task Create()
+      {
+        throw new NotImplementedException();
+      }
+      [Command( "delete" )]
+      public async Task Delete()
+      {
+        throw new NotImplementedException();
+      }
+      [Command( "add" )]
+      public async Task Add()
+      {
+        throw new NotImplementedException();
+      }
+      [Command( "remove" )]
+      public async Task Remove()
+      {
+        throw new NotImplementedException();
+      }
+    }
+
+    [Command( "play" )]
     public async Task Play()
     {
-
+      throw new NotImplementedException();
+    }
+    [Command( "next" )]
+    public async Task Next()
+    {
+      throw new NotImplementedException();
     }
 
     [Command("add")]
     public async Task QueueAdd( string content )
     {
-
+      throw new NotImplementedException();
     }
   }
 }
