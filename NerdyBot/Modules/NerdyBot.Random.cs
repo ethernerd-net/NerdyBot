@@ -11,7 +11,7 @@ using Discord.Commands;
 
 using NerdyBot.Services;
 
-namespace NerdyBot.Commands
+namespace NerdyBot.Modules
 {
   [Group( "random" ), Alias( "rnd", "rand" )]
   public class RandomTag : ModuleBase

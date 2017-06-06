@@ -8,7 +8,7 @@ using Discord.Commands;
 using NerdyBot.Services;
 using NerdyBot.Models;
 
-namespace NerdyBot.Commands
+namespace NerdyBot.Modules
 {
   [Group( "8ball" ), Alias( "8b" )]
   public class Ball8 : ModuleBase

@@ -9,7 +9,7 @@ using Discord.WebSocket;
 
 using NerdyBot.Services;
 
-namespace NerdyBot.Commands
+namespace NerdyBot.Modules
 {
   public class NerdyBotBase : ModuleBase
   {

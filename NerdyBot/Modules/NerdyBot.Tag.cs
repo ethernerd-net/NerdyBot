@@ -10,7 +10,7 @@ using Discord.Commands;
 using NerdyBot.Services;
 using NerdyBot.Models;
 
-namespace NerdyBot.Commands
+namespace NerdyBot.Modules
 {
   [Group( "tag" ), Alias( "t" )]
   public class TagCommand : ModuleBase

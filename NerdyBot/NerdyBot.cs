@@ -21,20 +21,22 @@ namespace NerdyBot
 
     private CommandService svcCommand = new CommandService();
     private DatabaseService svcDatabase;
-    private AudioService svcAudio;
     private MessageService svcMessage;
-    
+    private YoutubeService svcYoutube;
+    private AudioService svcAudio;
+
+    private BotConfig cfg;
+
     internal NerdyBot()
-    {      
+    {
+      this.cfg = Newtonsoft.Json.JsonConvert.DeserializeObject<BotConfig>( System.IO.File.ReadAllText( "conf.json" ) );
+
+      this.svcYoutube = new YoutubeService( cfg.YoutubeAPIKey, cfg.YoutubeAppName );
       this.svcMessage = new MessageService( this.client );
       this.svcAudio = new AudioService( svcMessage );
       this.svcDatabase = new DatabaseService();
 
       this.client.Ready += ClientReady;
-
-      this.svcDatabase.Database.CreateTable<ModuleConfig>();
-      if ( !this.svcDatabase.Database.Table<ModuleConfig>().Any( mc => mc.Name == "base" ) )
-        this.svcDatabase.Database.Insert( new ModuleConfig() { Name = "base", ApiKey = "INSERT DISCORD TOKEN HERE" } ); //TODO
     }
 
     private async Task ClientReady()
@@ -53,7 +55,9 @@ namespace NerdyBot
       svcProvider.AddService( svcAudio );
       svcProvider.AddService( svcMessage );
       svcProvider.AddService( svcDatabase );
+      svcProvider.AddService( svcYoutube );
       svcProvider.AddService( client );
+      svcProvider.AddService( cfg );
 
       await svcCommand.AddModulesAsync( Assembly.GetEntryAssembly() );
     }
@@ -87,7 +91,7 @@ namespace NerdyBot
     {
       await InstallCommands();
 
-      await client.LoginAsync( TokenType.Bot, this.svcDatabase.Database.Table<Models.ModuleConfig>().First( mc => mc.Name == "base" ).ApiKey );
+      await client.LoginAsync( TokenType.Bot, this.cfg.DiscordToken );
       await client.StartAsync();
 
       await Task.Delay( -1 );
