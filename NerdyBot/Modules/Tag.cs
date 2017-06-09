@@ -13,7 +13,7 @@ using NerdyBot.Models;
 namespace NerdyBot.Modules
 {
   [Group( "tag" ), Alias( "t" )]
-  public class TagCommand : ModuleBase
+  public class TagModule : ModuleBase
   {
     public AudioService AudioService { get; set; }
     public MessageService MessageService { get; set; }
@@ -27,7 +27,7 @@ namespace NerdyBot.Modules
       }
     }
 
-    public TagCommand( DatabaseService databaseService )
+    public TagModule( DatabaseService databaseService )
     {
       databaseService.Database.CreateTable<Tag>();
       databaseService.Database.CreateTable<TagEntry>();

@@ -14,7 +14,7 @@ using NerdyBot.Services;
 namespace NerdyBot.Modules
 {
   [Group( "random" ), Alias( "rnd", "rand" )]
-  public class RandomTag : ModuleBase
+  public class RandomModule : ModuleBase
   {
     public MessageService MessageService { get; set; }
 

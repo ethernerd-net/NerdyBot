@@ -14,7 +14,7 @@ using NerdyBot.Models;
 namespace NerdyBot.Modules
 {
   [Group( "search" ), Alias( "s" )]
-  public class Search : ModuleBase
+  public class SearchModule : ModuleBase
   {
     public BotConfig BotConfig { get; set; }
     public MessageService MessageService { get; set; }

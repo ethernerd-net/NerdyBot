@@ -11,12 +11,12 @@ using NerdyBot.Models;
 namespace NerdyBot.Modules
 {
   [Group( "8ball" ), Alias( "8b" )]
-  public class Ball8 : ModuleBase
+  public class Ball8Module : ModuleBase
   {
     public MessageService MessageService { get; set; }
     public DatabaseService DatabaseService { get; set; }
 
-    public Ball8( DatabaseService databaseService )
+    public Ball8Module( DatabaseService databaseService )
     {
       databaseService.Database.CreateTable<Ball8Answer>();
     }

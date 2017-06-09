@@ -11,7 +11,7 @@ using System.Collections.Generic;
 namespace NerdyBot.Modules
 {
   [Group("music"), Alias("m")]
-  public class Music : ModuleBase
+  public class MusicModule : ModuleBase
   {
     private ConcurrentDictionary<ulong, PlaylistMode> localModes = new ConcurrentDictionary<ulong, PlaylistMode>();
     private ConcurrentDictionary<ulong, List<MusicPlaylistEntry>> localLists = new ConcurrentDictionary<ulong, List<MusicPlaylistEntry>>();
