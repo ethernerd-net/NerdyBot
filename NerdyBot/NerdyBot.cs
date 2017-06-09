@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -80,11 +81,21 @@ namespace NerdyBot
 
       // Execute the command. (result does not indicate a return value, 
       // rather an object stating if the command executed succesfully)
-      var result = await svcCommand.ExecuteAsync( context, argPos, svcProvider );
+      IResult result;
+      if ( message.HasMentionPrefix( client.CurrentUser, ref argPos ) )
+      {
+        var cmd = svcCommand.Commands.First( c => c.Name == "chat" );
+        var lst = new string[] { message.Content.Substring( argPos ) };
+        result = await cmd.ExecuteAsync( context, lst, lst, svcProvider );
+      }
+      else
+      {
+        result = await svcCommand.ExecuteAsync( context, argPos, svcProvider );
+
+        await messageParam.DeleteAsync();
+      }
       if ( !result.IsSuccess )
         await context.Channel.SendMessageAsync( $"`{result.ErrorReason}`" );
-
-      await messageParam.DeleteAsync();
     }
 
     public async Task Start()

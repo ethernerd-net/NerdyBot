@@ -4,5 +4,6 @@
     "YoutubeAPIKey": "YT_KEY",
     "ImgurClientId": "IMGUR_CLIENT_ID",
     "GeniusAccessToken": "ACCESS_TOKEN",
+    "CleverBotApiKey":  "API_KEY",
     "AdminUserId" :  0
 }

@@ -19,10 +19,14 @@ namespace NerdyBot.Modules
     public MessageService MessageService { get; set; }
     public DiscordSocketClient Client { get; set; }
 
-    [Command( "purge" ), Alias( "t" ), RequireUserPermission( Discord.GuildPermission.Administrator )]
+    [Command( "purge", RunMode = RunMode.Async ), Alias( "t" )]
+    [RequireUserPermission( Discord.GuildPermission.Administrator )]
+    [RequireBotPermission( Discord.ChannelPermission.ManageMessages )]
     public async Task Purge( int count )
     {
-      await Context.Channel.DeleteMessagesAsync( Context.Channel.GetMessagesAsync( count ).First().Result );
+      var enumerator = Context.Channel.GetMessagesAsync( count + 1 ).GetEnumerator();
+      while ( await enumerator.MoveNext( new System.Threading.CancellationToken() ) )
+        await Context.Channel.DeleteMessagesAsync( enumerator.Current );
     }
 
     [Command( "stop" )]

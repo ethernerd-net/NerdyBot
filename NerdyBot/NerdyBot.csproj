@@ -55,10 +55,6 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Cleverbot.Net, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Cleverbot.Net.1.0.0\lib\net45\Cleverbot.Net.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="Discord.Net.Commands, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Discord.Net.Commands.1.0.0-rc2\lib\netstandard1.1\Discord.Net.Commands.dll</HintPath>
       <Private>True</Private>
@@ -282,6 +278,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helper\CleverbotResponse.cs" />
+    <Compile Include="Helper\CleverbotSession.cs" />
     <Compile Include="Models\Ball8Answer.cs" />
     <Compile Include="Models\BotConfig.cs" />
     <Compile Include="Models\ModuleRestriction.cs" />
@@ -290,6 +288,7 @@
     <Compile Include="Models\Tag.cs" />
     <Compile Include="Models\TagEntry.cs" />
     <Compile Include="Modules\Base.cs" />
+    <Compile Include="Modules\CleverBot.cs" />
     <Compile Include="Modules\Music.cs" />
     <Compile Include="Services\AudioService.cs" />
     <Compile Include="Services\DatabaseService.cs" />

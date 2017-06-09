@@ -218,13 +218,13 @@ namespace NerdyBot.Modules
       sb.AppendLine();
       sb.AppendLine();
 
-      foreach ( var entry in DatabaseService.Database.Table<TagEntry>() )
+      foreach ( var entry in DatabaseService.Database.Table<TagEntry>().Where( te => te.TagId == tag.Id ) )
         sb.AppendLine( entry.TextContent );
 
       await MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block );
     }
 
-    [Command( "help" )]
+    [Command( "help" ), Priority( 10 )]
     public async Task Help()
     {
       await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );

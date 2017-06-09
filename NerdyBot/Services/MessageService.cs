@@ -21,7 +21,7 @@ namespace NerdyBot.Services
     {
       Console.WriteLine( arg.ToString() );
     }
-
+    
     public async Task SendMessageToCurrentChannel( ICommandContext context, string message, MessageType mType = MessageType.Normal, bool split = false, string highlight = "" )
     {
       await SendMessage( context.Channel, message, mType, split, highlight );
@@ -30,7 +30,7 @@ namespace NerdyBot.Services
     {
       var usr = await context.Guild.GetUserAsync( context.User.Id );
       await SendMessage( await usr.CreateDMChannelAsync(), message, mType, split, highlight );
-    }    
+    }
 
     public async Task Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info )
     {
@@ -87,7 +87,7 @@ namespace NerdyBot.Services
     {
       if ( !split && message.Length > chunkSize )
       {
-        string fn = Guid.NewGuid().ToString();
+        string fn = $"{Guid.NewGuid().ToString()}.txt";
         File.WriteAllText( fn, message );
         await channel.SendFileAsync( fn );
         File.Delete( fn );
