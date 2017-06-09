@@ -19,13 +19,10 @@ namespace NerdyBot.Modules
     public MessageService MessageService { get; set; }
     public DiscordSocketClient Client { get; set; }
 
-    [Command( "purge" ), Alias( "t" )]
+    [Command( "purge" ), Alias( "t" ), RequireUserPermission( Discord.GuildPermission.Administrator )]
     public async Task Purge( int count )
     {
-      if ( ( await Context.Guild.GetUserAsync( Context.User.Id ) ).GuildPermissions.Administrator )
-        await Context.Channel.DeleteMessagesAsync( await Context.Channel.GetMessagesAsync( count ).First() );
-      else
-        await MessageService.Log( "Accesspermission Violation attempt", Context.User.ToString() );
+      await Context.Channel.DeleteMessagesAsync( Context.Channel.GetMessagesAsync( count ).First().Result );
     }
 
     [Command( "stop" )]
@@ -40,6 +37,7 @@ namespace NerdyBot.Modules
       await AudioService.LeaveChannel( Context.Guild.Id );
     }
 
+    [Command( "join" )]
     public async Task JoinChannel()
     {
       await AudioService.JoinChannel( Context );
@@ -73,7 +71,7 @@ namespace NerdyBot.Modules
            sb.AppendLine();
          }
        }
-       await MessageService.SendMessage( Context, sb.ToString(), new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, Split = true, MessageType = MessageType.Info } );
+       await MessageService.SendMessageToCurrentUser( Context, sb.ToString(), MessageType.Info, true );
      }
   }
 }

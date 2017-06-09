@@ -82,7 +82,7 @@ namespace NerdyBot
       // rather an object stating if the command executed succesfully)
       var result = await svcCommand.ExecuteAsync( context, argPos, svcProvider );
       if ( !result.IsSuccess )
-        await context.Channel.SendMessageAsync( result.ErrorReason );
+        await context.Channel.SendMessageAsync( $"`{result.ErrorReason}`" );
 
       await messageParam.DeleteAsync();
     }

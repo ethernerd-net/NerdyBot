@@ -22,45 +22,15 @@ namespace NerdyBot.Services
       Console.WriteLine( arg.ToString() );
     }
 
-    public async Task SendMessage( ICommandContext context, string message, SendMessageOptions options )
+    public async Task SendMessageToCurrentChannel( ICommandContext context, string message, MessageType mType = MessageType.Normal, bool split = false, string highlight = "" )
     {
-      switch ( options.TargetType )
-      {
-      case TargetType.User:
-        var usr = await context.Guild.GetUserAsync( context.User.Id );
-        var dmcChannel = await usr.CreateDMChannelAsync();
-        if ( !options.Split && message.Length > 1990 )
-        {
-          File.WriteAllText( context.User.Id + "_raw.txt", message );
-          await dmcChannel.SendFileAsync( context.User.Id + "_raw.txt" );
-          File.Delete( context.User.Id + "_raw.txt" );
-        }
-        else
-        {
-          foreach ( string msg in ChunkMessage( message ) )
-            await dmcChannel.SendMessageAsync( FormatMessage( msg, options.MessageType, options.Hightlight ) );
-        }
-        break;
-      case TargetType.Channel:
-        {
-          var channel = await context.Guild.GetTextChannelAsync( options.TargetId );
-          if ( !options.Split && message.Length > 1990 )
-          {
-            File.WriteAllText( context.User.Id + "_raw.txt", message );
-            await channel.SendFileAsync( context.User.Id + "_raw.txt" );
-            File.Delete( context.User.Id + "_raw.txt" );
-          }
-          else
-          {
-            foreach ( string msg in ChunkMessage( message ) )
-              await channel.SendMessageAsync( FormatMessage( msg, options.MessageType, options.Hightlight ) );
-          }
-        }
-        break;
-      default:
-        throw new Exception( "WTF?!!?" );
-      }
+      await SendMessage( context.Channel, message, mType, split, highlight );
     }
+    public async Task SendMessageToCurrentUser( ICommandContext context, string message, MessageType mType = MessageType.Normal, bool split = false, string highlight = "" )
+    {
+      var usr = await context.Guild.GetUserAsync( context.User.Id );
+      await SendMessage( await usr.CreateDMChannelAsync(), message, mType, split, highlight );
+    }    
 
     public async Task Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info )
     {
@@ -113,16 +83,21 @@ namespace NerdyBot.Services
       }
       return formatedMessage;
     }
+    private async Task SendMessage( IMessageChannel channel, string message, MessageType mType = MessageType.Normal, bool split = false, string highlight = "" )
+    {
+      if ( !split && message.Length > chunkSize )
+      {
+        string fn = Guid.NewGuid().ToString();
+        File.WriteAllText( fn, message );
+        await channel.SendFileAsync( fn );
+        File.Delete( fn );
+      }
+      else
+      {
+        foreach ( string msg in ChunkMessage( message ) )
+          await channel.SendMessageAsync( FormatMessage( msg, mType, highlight ) );
+      }
+    }
   }
-
-  public class SendMessageOptions
-  {
-    public ulong TargetId { get; set; }
-    public TargetType TargetType { get; set; }
-    public bool Split { get; set; }
-    public MessageType MessageType { get; set; }
-    public string Hightlight { get; set; }
-  }
-  public enum TargetType { User = 0, Channel = 1 }
   public enum MessageType { Normal, Block, Info }
 }

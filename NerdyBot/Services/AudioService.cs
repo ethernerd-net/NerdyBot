@@ -10,12 +10,14 @@ using Discord.Audio;
 using Discord.Commands;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using NerdyBot.Models;
 
 namespace NerdyBot.Services
 {
   public class AudioService
   {
     private ConcurrentDictionary<ulong, bool> playing = new ConcurrentDictionary<ulong, bool>();
+    private ConcurrentDictionary<ulong, bool> listPlaying = new ConcurrentDictionary<ulong, bool>();
     private ConcurrentDictionary<ulong, object> locks = new ConcurrentDictionary<ulong, object>();
     private ConcurrentDictionary<ulong, ulong> lastChannels = new ConcurrentDictionary<ulong, ulong>();
     private ConcurrentDictionary<ulong, IAudioClient> audioClients = new ConcurrentDictionary<ulong, IAudioClient>();
@@ -82,6 +84,18 @@ namespace NerdyBot.Services
       }
     }
 
+    /*public void PlayList( ConcurrentDictionary<int, string> playlist, int currentKey = -1, PlaylistMode mode = PlaylistMode.Normal )
+    {
+      string currentUrl = string.Empty;
+      if ( !playlist.TryGetValue( currentKey, out currentUrl ) )
+        currentUrl = playlist.First().Value;
+
+
+      while ( mode == PlaylistMode.Normal && playlist.Last().Value == currentUrl )
+      {
+      }
+    }*/
+
     public async Task LeaveChannel( ulong guildId )
     {
       if ( this.audioClients[guildId] != null )
@@ -94,7 +108,7 @@ namespace NerdyBot.Services
       if ( channel != null )
       {
         //this.svcMessage.Log( "playing " + Path.GetDirectoryName( localPath ), context.User.ToString() );
-        if ( lastChannels[context.Guild.Id] != channel.Id )
+        if ( lastChannels[context.Guild.Id] != channel.Id || audioClients[context.Guild.Id].ConnectionState == Discord.ConnectionState.Disconnected )
         {
           lastChannels[context.Guild.Id] = channel.Id;
           audioClients[context.Guild.Id] = await channel.ConnectAsync();
@@ -112,6 +126,7 @@ namespace NerdyBot.Services
       this.locks.TryAdd( id, new object() );
       this.lastChannels.TryAdd( id, 0 );
       this.playing.TryAdd( id, false );
+      this.listPlaying.TryAdd( id, false );
     }
 
 

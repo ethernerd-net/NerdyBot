@@ -34,18 +34,18 @@ namespace NerdyBot.Modules
     }
 
     [Command( "create" )]
-    public async Task Create( string tagName, TagType tagType, params string[] content )
+    public void Create( string tagName, TagType tagType, params string[] content )
     {
-      if ( IsValidName( tagName, Context.Guild.Id ) )
+      Task.Run( async () =>
       {
-        string author = Context.User.ToString();
-        try
+        if ( !IsValidName( tagName, Context.Guild.Id ) )
+          await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' bereits in Verwendung!", MessageType.Info );
+        else
         {
-          MessageService.Log( $"creating tag '{tagName.ToLower()}'", author );
           Tag tag = new Tag()
           {
             Name = tagName,
-            Author = author,
+            Author = Context.User.ToString(),
             Type = tagType,
             CreateDate = DateTime.Now,
             Count = 0,
@@ -63,122 +63,96 @@ namespace NerdyBot.Modules
             break;
 
           case TagType.Sound:
-            try
+            int amountCreated = await AddSoundToTag( tag, content );
+            if ( amountCreated != content.Count() )
             {
-              AddSoundToTag( tag, content );
-            }
-            catch ( Exception ex )
-            {
-              MessageService.Log( ex.Message, "Exception" );
-              MessageService.SendMessage( Context, $"Tag '{tagName}' konnte nicht erstellt werden!",
-                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-              DatabaseService.Database.Delete( tag );
+              await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' konnte nur {amountCreated} von {content.Count()} Einträgen anlegen!", MessageType.Info );
+              if ( amountCreated == 0 )
+              {
+                DatabaseService.Database.Delete( tag );
+                throw new InvalidDataException( "Erstellung abgebrochen!" );
+              }
             }
             break;
+
           default:
             throw new ArgumentException( "WTF?!?!" );
           }
-          MessageService.Log( "finished creation", author );
-          MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich erstellt!",
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+          await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' erfolgreich erstellt!", MessageType.Info );
         }
-        catch ( Exception ex )
-        {
-          MessageService.Log( ex.Message, "Exception" );
-        }
-      }
-      else
-      {
-        MessageService.SendMessage( Context, $"Tag '{tagName}' bereits in Verwendung!",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-      }
+      } );
     }
 
     [Command( "edit" )]
-    public async Task Edit( string tagName, string editType, params string[] content )
+    public void Edit( string tagName, EditType editType, params string[] content )
     {
-      var tag = GetTag( tagName, Context.Guild.Id );
-      if ( tag == null )
-        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-      else
+      Task.Run( async () =>
       {
-        if ( tag.Author == Context.User.ToString() )
+        var tag = GetTag( tagName, Context.Guild.Id );
+        if ( tag.Author != Context.User.ToString() && !( await Context.Guild.GetUserAsync( Context.User.Id ) ).GuildPermissions.Administrator )
+          await MessageService.SendMessageToCurrentChannel( Context, $"Du bist zu unwichtig für diese Aktion", MessageType.Info );
+        else
         {
           switch ( editType )
           {
-          case "add":
-            bool success = true;
+          case EditType.Add:
+            int count = 0;
             switch ( tag.Type )
             {
             case TagType.Url:
             case TagType.Text:
               AddTextToTag( tag, content );
+              count = content.Count();
               break;
             case TagType.Sound:
-              try
-              {
-                AddSoundToTag( tag, content );
-              }
-              catch ( Exception ex )
-              {
-                success = false;
-                MessageService.Log( ex.Message, "Exception" );
-                MessageService.SendMessage( Context, $"Einige Einträge konnten nicht hinzugefügt werden!",
-                  new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-              }
+              count = await AddSoundToTag( tag, content );
               break;
             default:
               throw new ArgumentException( "WTF?!?!" );
             }
-            if ( success )
-              MessageService.SendMessage( Context, $"{content.Count()} Einträge zu '{tag.Name} hinzugefügt'!",
-                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+            await MessageService.SendMessageToCurrentChannel( Context, $"{count} Einträge zu '{tag.Name} hinzugefügt'!", MessageType.Info );
             break;
-          case "remove":
+
+          case EditType.Remove:
             int remCount = RemoveTagEntry( tag, content );
-            MessageService.SendMessage( Context, $"{remCount} / {content.Count()} removed",
-              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+            await MessageService.SendMessageToCurrentChannel( Context, $"{remCount} / {content.Count()} removed", MessageType.Info );
             break;
-          case "rename":
+
+          case EditType.Rename:
             string newTagName = content[0].ToLower();
             if ( IsValidName( newTagName, Context.Guild.Id ) )
             {
               tag.Name = newTagName;
-              MessageService.SendMessage( Context, $"Tag umbenannt in '{tag.Name}'!",
-                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+              await MessageService.SendMessageToCurrentChannel( Context, $"Tag umbenannt in '{tag.Name}'!", MessageType.Info );
             }
             else
-              MessageService.SendMessage( Context, $"Tag '{newTagName}' existiert bereits oder ist reserviert!!",
-                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+              await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{newTagName}' existiert bereits oder ist reserviert!!", MessageType.Info );
             break;
-          case "volume":
+
+          case EditType.Volume:
             short vol;
             if ( short.TryParse( content[0], out vol ) && vol > 0 && vol <= 100 )
               tag.Volume = vol;
             else
-              MessageService.SendMessage( Context, $"Die Lautstärke muss eine Zahl zwischen 0 und 101 sein!",
-                new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+              await MessageService.SendMessageToCurrentChannel( Context, $"Die Lautstärke muss eine Zahl zwischen 0 und 101 sein!", MessageType.Info );
             break;
           default:
-            MessageService.SendMessage( Context, $"Die Option Name '{editType}' ist nicht valide!",
-              new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+            await MessageService.SendMessageToCurrentChannel( Context, $"Die Option Name '{editType}' ist nicht valide!", MessageType.Info );
             break;
           }
           DatabaseService.Database.Update( tag );
         }
-        else
-          MessageService.SendMessage( Context, $"Du bist zu unwichtig für diese Aktion",
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-      }
+      } );
     }
 
     [Command( "list" ), Priority( 10 )]
     public async Task List()
     {
-      var tagsInOrder = DatabaseService.Database.Table<Tag>().Where( t => t.GuildId == ( long )Context.Guild.Id ).OrderBy( x => x.Name );
+      long gid = ( long )Context.Guild.Id;
+      var tagsInOrder = DatabaseService.Database.Table<Tag>().Where( t => t.GuildId == gid ).OrderBy( x => x.Name );
       StringBuilder sb = new StringBuilder( "" );
-      if ( tagsInOrder.Count() > 0 )
+
+      if ( tagsInOrder.Any() )
       {
         char lastHeader = '<';
         foreach ( Tag t in tagsInOrder )
@@ -197,119 +171,91 @@ namespace NerdyBot.Modules
         }
         sb.Remove( sb.Length - 2, 2 );
       }
-      MessageService.SendMessage( Context, sb.ToString(),
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block, Hightlight = "md", Split = true } );
+      await MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block, true, "md" );
     }
 
     [Command( "delete" )]
     public async Task Delete( string tagName )
     {
       var tag = GetTag( tagName, Context.Guild.Id );
-      if ( tag == null )
-        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+      if ( DatabaseService.Database.Delete<Tag>( tag.Id ) > 0 )
+        await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' erfolgreich gelöscht!", MessageType.Info );
       else
-      {
-        if ( DatabaseService.Database.Delete<Tag>( tag.Id ) > 0 )
-          MessageService.SendMessage( Context, $"Tag '{tagName}' erfolgreich gelöscht!",
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-        else
-          MessageService.SendMessage( Context, $"Fehler beim löschen (schade)!",
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-      }
+        await MessageService.SendMessageToCurrentChannel( Context, $"Fehler beim löschen (schade)!", MessageType.Info );
     }
 
     [Command( "info" )]
     public async Task Info( string tagName )
     {
       var tag = GetTag( tagName, Context.Guild.Id );
-      if ( tag == null )
-        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-      else
-      {
-        StringBuilder sb = new StringBuilder( $"==== {tag.Name} =====" );
-        sb.AppendLine();
-        sb.AppendLine();
+      StringBuilder sb = new StringBuilder( $"==== {tag.Name} =====" );
+      sb.AppendLine();
+      sb.AppendLine();
 
-        sb.Append( "Author: " );
-        sb.AppendLine( tag.Author );
+      sb.Append( "Author: " );
+      sb.AppendLine( tag.Author );
 
-        sb.Append( "Typ: " );
-        sb.AppendLine( Enum.GetName( typeof( TagType ), tag.Type ) );
+      sb.Append( "Typ: " );
+      sb.AppendLine( Enum.GetName( typeof( TagType ), tag.Type ) );
 
-        sb.Append( "Erstellungs Datum: " );
-        sb.AppendLine( tag.CreateDate.ToLongDateString() );
+      sb.Append( "Erstellungs Datum: " );
+      sb.AppendLine( tag.CreateDate.ToLongDateString() );
 
-        sb.Append( "Hits: " );
-        sb.AppendLine( tag.Count.ToString() );
+      sb.Append( "Hits: " );
+      sb.AppendLine( tag.Count.ToString() );
 
-        sb.Append( "Anzahl Einträge: " );
-        sb.AppendLine( DatabaseService.Database.Table<TagEntry>().Count( te => te.TagId == tag.Id ).ToString() );
+      sb.Append( "Anzahl Einträge: " );
+      sb.AppendLine( DatabaseService.Database.Table<TagEntry>().Count( te => te.TagId == tag.Id ).ToString() );
 
-        MessageService.SendMessage( Context, sb.ToString(),
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
-      }
+      await MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block );
     }
 
     [Command( "raw" )]
     public async Task Raw( string tagName )
     {
       var tag = GetTag( tagName, Context.Guild.Id );
-      if ( tag == null )
-        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-      else
-      {
-        StringBuilder sb = new StringBuilder( $"==== {tag.Name} ====" );
-        sb.AppendLine();
-        sb.AppendLine();
+      StringBuilder sb = new StringBuilder( $"==== {tag.Name} ====" );
+      sb.AppendLine();
+      sb.AppendLine();
 
-        foreach ( var entry in DatabaseService.Database.Table<TagEntry>() )
-          sb.AppendLine( entry.TextContent );
+      foreach ( var entry in DatabaseService.Database.Table<TagEntry>() )
+        sb.AppendLine( entry.TextContent );
 
-        MessageService.SendMessage( Context, sb.ToString(),
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
-      }
+      await MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block );
     }
 
     [Command( "help" )]
     public async Task Help()
     {
-      MessageService.SendMessage( Context, FullHelp(),
-        new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
+      await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
     }
 
     [Command()]
-    public async Task Send( string tagName )
+    public void Send( string tagName )
     {
-      var tag = DatabaseService.Database.Table<Tag>().FirstOrDefault( t => t.Name == tagName.ToLower() );
-      if ( tag == null )
-        MessageService.SendMessage( Context, $"Tag '{tagName}' existiert nicht!",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
-      else
+      Task.Run( async () =>
       {
+        var tag = GetTag( tagName, Context.Guild.Id );
         var tagEntries = DatabaseService.Database.Table<TagEntry>().Where( te => te.TagId == tag.Id );
+
         int idx = ( new Random() ).Next( 0, tagEntries.Count() );
         switch ( tag.Type )
         {
         case TagType.Text:
-          MessageService.SendMessage( Context, tagEntries.ElementAt( idx ).TextContent,
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
+          await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent, MessageType.Info );
           break;
         case TagType.Sound:
-          AudioService.SendAudio( Context, tagEntries.ElementAt( idx ).ByteContent, tag.Volume / 100f );
+          await AudioService.SendAudio( Context, tagEntries.ElementAt( idx ).ByteContent, tag.Volume / 100f );
           break;
         case TagType.Url:
-          MessageService.SendMessage( Context, tagEntries.ElementAt( idx ).TextContent,
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+          await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent );
           break;
         default:
           throw new ArgumentException( "WTF?!" );
         }
         tag.Count++;
         DatabaseService.Database.Update( tag );
-      }
+      } );
     }
 
     public static string QuickHelp()
@@ -368,27 +314,40 @@ namespace NerdyBot.Modules
     }
     private Tag GetTag( string name, ulong guildId )
     {
-      return DatabaseService.Database.Table<Tag>().FirstOrDefault( t => t.Name == name.ToLower() && t.GuildId == ( long )guildId );
+      var tag = DatabaseService.Database.Table<Tag>().FirstOrDefault( t => t.Name == name.ToLower() && t.GuildId == ( long )guildId );
+      if ( tag == null )
+        throw new ApplicationException( $"Tag '{name}' existiert nicht!" );
+      return tag;
     }
     private void AddTextToTag( Tag tag, string[] entries )
     {
       foreach ( string entry in entries )
         DatabaseService.Database.Insert( new TagEntry() { TagId = tag.Id, TextContent = entry } );
     }
-    private async void AddSoundToTag( Tag tag, string[] entries )
+    private async Task<int> AddSoundToTag( Tag tag, string[] entries )
     {
+      int count = 0;
       string path = Path.Combine( "tag", tag.Name );
       Directory.CreateDirectory( path );
 
       foreach ( string entry in entries )
       {
-        DatabaseService.Database.Insert( new TagEntry()
+        try
         {
-          TagId = tag.Id,
-          TextContent = entry,
-          ByteContent = await AudioService.DownloadAudio( entry )
-        } );
+          DatabaseService.Database.Insert( new TagEntry()
+          {
+            TagId = tag.Id,
+            TextContent = entry,
+            ByteContent = await AudioService.DownloadAudio( entry )
+          } );
+          count++;
+        }
+        catch ( Exception ex )
+        {
+          await MessageService.Log( ex.Message, "Exception" );
+        }
       }
+      return count;
     }
     private int RemoveTagEntry( Tag tag, string[] entries )
     {
@@ -402,5 +361,7 @@ namespace NerdyBot.Modules
 
       return remCount;
     }
+
+    public enum EditType { Add, Remove, Rename, Volume }
   }
 }

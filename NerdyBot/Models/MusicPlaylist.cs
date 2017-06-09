@@ -11,8 +11,8 @@ namespace NerdyBot.Models
     [Unique]
     public string UniqueID { get; set; } // GuildId + Name
     public string Name { get; set; }
-    public bool Shuffle { get; set; }
-    public bool Repeat { get; set; }
+    public PlaylistMode PlaylistMode { get; set; }
     public int CurrentEntry { get; set; }
   }
+  public enum PlaylistMode { Normal, Shuffle, Repeat }
 }

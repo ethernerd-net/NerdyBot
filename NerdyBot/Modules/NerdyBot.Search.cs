@@ -1,5 +1,4 @@
-﻿
-using System.IO;
+﻿using System.IO;
 using System.Net;
 using System.Linq;
 using System.Text;
@@ -26,11 +25,9 @@ namespace NerdyBot.Modules
     {
       var responseItem = ( await YoutubeService.SearchVideos( query, 1 ) ).FirstOrDefault();
       if ( responseItem != null )
-        MessageService.SendMessage( Context, $"https://www.youtube.com/watch?v={responseItem.Id.VideoId}",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+        await MessageService.SendMessageToCurrentChannel( Context, $"https://www.youtube.com/watch?v={responseItem.Id.VideoId}" );
       else
-        MessageService.SendMessage( Context, "Und ich dachte es gibt alles auf youtube",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+        await MessageService.SendMessageToCurrentChannel( Context, "Und ich dachte es gibt alles auf youtube", MessageType.Info );
     }
 
     [Command( "imgur" ), Alias( "i" )]
@@ -45,11 +42,9 @@ namespace NerdyBot.Modules
         var imgurJson = JsonConvert.DeserializeObject<ImgurJson>( responseJson );
         ImgurData data;
         if ( imgurJson.success && ( data = imgurJson.data.FirstOrDefault() ) != null )
-          MessageService.SendMessage( Context, data.link.Replace( "\\", "" ),
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+          await MessageService.SendMessageToCurrentChannel( Context, data.link.Replace( "\\", "" ) );
         else
-          MessageService.SendMessage( Context, "No memes today.",
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+          await MessageService.SendMessageToCurrentChannel( Context, "No memes today.", MessageType.Info );
       }
     }
 
@@ -59,11 +54,9 @@ namespace NerdyBot.Modules
       string urbanJson = ( new WebClient() ).DownloadString( $"http://api.urbandictionary.com/v0/define?term={query}" );
       var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
       if ( urban.list != null && urban.list.Count() > 0 )
-        MessageService.SendMessage( Context, urban.list.First().permalink.Replace( "\\", "" ),
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+        await MessageService.SendMessageToCurrentChannel( Context, urban.list.First().permalink.Replace( "\\", "" ) );
       else
-        MessageService.SendMessage( Context, "404, Urban not found!",
-          new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+        await MessageService.SendMessageToCurrentChannel( Context, "404, Urban not found!", MessageType.Info );
     }
 
     [Command( "lyrics" ), Alias( "l" )]
@@ -78,19 +71,16 @@ namespace NerdyBot.Modules
         var geniusJson = JsonConvert.DeserializeObject<GeniusJson>( responseJson ).response;
         Hit data;
         if ( ( data = geniusJson.hits.FirstOrDefault() ) != null )
-          MessageService.SendMessage( Context, data.result.url.Replace( "\\", "" ),
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+          await MessageService.SendMessageToCurrentChannel( Context, data.result.url.Replace( "\\", "" ) );
         else
-          MessageService.SendMessage( Context, "No memes today.",
-            new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Info } );
+          await MessageService.SendMessageToCurrentChannel( Context, "No memes today.", MessageType.Info );
       }
     }
 
     [Command( "help" )]
     public async Task Help()
     {
-      MessageService.SendMessage( Context, FullHelp(),
-        new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
+      await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
     }
 
     public static string QuickHelp()

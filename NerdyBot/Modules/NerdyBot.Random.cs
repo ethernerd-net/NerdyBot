@@ -23,16 +23,14 @@ namespace NerdyBot.Modules
     {
       string catJson = ( new WebClient() ).DownloadString( "http://random.cat/meow" );
       var cat = JsonConvert.DeserializeObject<RandomCat>( catJson );
-      MessageService.SendMessage( Context, cat.file.Replace( "\\", "" ),
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      await MessageService.SendMessageToCurrentChannel( Context, cat.file.Replace( "\\", "" ) );
     }
 
     [Command( "penguin" )]
     public async Task Penguin()
     {
       string pengu = ( new WebClient() ).DownloadString( "http://penguin.wtf/" );
-      MessageService.SendMessage( Context, pengu,
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      await MessageService.SendMessageToCurrentChannel( Context, pengu );
     }
 
     [Command( "bunny" )]
@@ -40,8 +38,7 @@ namespace NerdyBot.Modules
     {
       string bunnyJson = ( new WebClient() ).DownloadString( "https://api.bunnies.io/v2/loop/random/?media=gif" );
       var bunny = JsonConvert.DeserializeObject<RandomBunny>( bunnyJson );
-      MessageService.SendMessage( Context, bunny.media.gif,
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      await MessageService.SendMessageToCurrentChannel( Context, bunny.media.gif );
     }
 
     [Command( "chuck" )]
@@ -49,8 +46,7 @@ namespace NerdyBot.Modules
     {
       string chuckJson = ( new WebClient() ).DownloadString( "http://api.icndb.com/jokes/random" );
       var chuck = JsonConvert.DeserializeObject<RandomChuck>( chuckJson );
-      MessageService.SendMessage( Context, chuck.value.joke,
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      await MessageService.SendMessageToCurrentChannel( Context, chuck.value.joke );
     }
 
     [Command( "joke" )]
@@ -58,8 +54,7 @@ namespace NerdyBot.Modules
     {
       string jokeJson = ( new WebClient() ).DownloadString( "http://tambal.azurewebsites.net/joke/random" );
       var joke = JsonConvert.DeserializeObject<ChuckJoke>( jokeJson );
-      MessageService.SendMessage( Context, joke.joke,
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      await MessageService.SendMessageToCurrentChannel( Context, joke.joke );
     }
 
     [Command( "yomomma" )]
@@ -67,8 +62,7 @@ namespace NerdyBot.Modules
     {
       string momJson = ( new WebClient() ).DownloadString( "http://api.yomomma.info/" );
       var mom = JsonConvert.DeserializeObject<ChuckJoke>( momJson );
-      MessageService.SendMessage( Context, mom.joke,
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      await MessageService.SendMessageToCurrentChannel( Context, mom.joke );
     }
 
     [Command( "quote" )]
@@ -77,8 +71,7 @@ namespace NerdyBot.Modules
       string quoteJson = ( new WebClient() ).DownloadString( "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand" );
       var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
       string text = StripHTML( EntityToUnicode( quote.content ) );
-      MessageService.SendMessage( Context, text + Environment.NewLine + Environment.NewLine + "-" + quote.title,
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id, MessageType = MessageType.Block } );
+      await MessageService.SendMessageToCurrentChannel( Context, text + Environment.NewLine + Environment.NewLine + "-" + quote.title, MessageType.Block );
     }
 
     [Command( "trump" )]
@@ -86,8 +79,7 @@ namespace NerdyBot.Modules
     {
       string trumpJson = ( new WebClient() ).DownloadString( "https://api.whatdoestrumpthink.com/api/v1/quotes/random" );
       var trump = JsonConvert.DeserializeObject<TrumpQuote>( trumpJson );
-      MessageService.SendMessage( Context, "Trump : " + trump.message,
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      await MessageService.SendMessageToCurrentChannel( Context, "Trump : " + trump.message );
     }
 
     [Command( "xkcd" )]
@@ -98,15 +90,13 @@ namespace NerdyBot.Modules
 
       xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/" + ( new Random() ).Next( xkcd.num ) + "/info.0.json" );
       xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
-      MessageService.SendMessage( Context, xkcd.img.Replace( "\\", "" ),
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+      await MessageService.SendMessageToCurrentChannel( Context, xkcd.img.Replace( "\\", "" ) );
     }
 
     [Command( "help" )]
     public async Task help()
     {
-      MessageService.SendMessage( Context, FullHelp(),
-        new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
+      await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
     }
 
     public static string QuickHelp()

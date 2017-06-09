@@ -22,7 +22,7 @@ namespace NerdyBot.Modules
     }
 
     [Command( "add" )]
-    public async Task Add( params string[] content )
+    public void Add( params string[] content )
     {
       foreach ( var entry in content )
         DatabaseService.Database.Insert( new Ball8Answer() { Answer = entry } );
@@ -31,8 +31,7 @@ namespace NerdyBot.Modules
     [Command( "help" )]
     public async Task Help()
     {
-      MessageService.SendMessage( Context, FullHelp(),
-        new SendMessageOptions() { TargetType = TargetType.User, TargetId = Context.User.Id, MessageType = MessageType.Block } );
+      await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
     }
 
     [Command()]
@@ -40,8 +39,8 @@ namespace NerdyBot.Modules
     {
       var answers = DatabaseService.Database.Table<Ball8Answer>().ToList();
       int idx = ( new Random() ).Next( 0, answers.Count() );
-      MessageService.SendMessage( Context, $"{Context.User.Mention} asked: '{question}'{Environment.NewLine}{Environment.NewLine}" + answers[idx],
-        new SendMessageOptions() { TargetType = TargetType.Channel, TargetId = Context.Channel.Id } );
+
+      await MessageService.SendMessageToCurrentChannel( Context, $"{Context.User.Mention} asked: '{question}'{Environment.NewLine}{Environment.NewLine}" + answers[idx], MessageType.Info );
     }
 
     public static string QuickHelp()
