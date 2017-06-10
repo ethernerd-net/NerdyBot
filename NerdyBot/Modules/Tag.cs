@@ -235,26 +235,33 @@ namespace NerdyBot.Modules
     {
       Task.Run( async () =>
       {
-        var tag = GetTag( tagName, Context.Guild.Id );
-        var tagEntries = DatabaseService.Database.Table<TagEntry>().Where( te => te.TagId == tag.Id );
-
-        int idx = ( new Random() ).Next( 0, tagEntries.Count() );
-        switch ( tag.Type )
+        try
         {
-        case TagType.Text:
-          await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent, MessageType.Info );
-          break;
-        case TagType.Sound:
-          await AudioService.SendAudio( Context, tagEntries.ElementAt( idx ).ByteContent, tag.Volume / 100f );
-          break;
-        case TagType.Url:
-          await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent );
-          break;
-        default:
-          throw new ArgumentException( "WTF?!" );
+          var tag = GetTag( tagName, Context.Guild.Id );
+          var tagEntries = DatabaseService.Database.Table<TagEntry>().Where( te => te.TagId == tag.Id );
+
+          int idx = ( new Random() ).Next( 0, tagEntries.Count() );
+          switch ( tag.Type )
+          {
+          case TagType.Text:
+            await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent, MessageType.Info );
+            break;
+          case TagType.Sound:
+            await AudioService.SendAudio( Context, tagEntries.ElementAt( idx ).ByteContent, tag.Volume / 100f );
+            break;
+          case TagType.Url:
+            await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent );
+            break;
+          default:
+            throw new ArgumentException( "WTF?!" );
+          }
+          tag.Count++;
+          DatabaseService.Database.Update( tag );
         }
-        tag.Count++;
-        DatabaseService.Database.Update( tag );
+        catch ( Exception ex )
+        {
+          await MessageService.SendMessageToCurrentChannel( Context, ex.Message, MessageType.Info );
+        }
       } );
     }
 

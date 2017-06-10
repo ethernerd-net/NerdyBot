@@ -24,7 +24,7 @@ namespace NerdyBot.Modules
     [RequireBotPermission( Discord.ChannelPermission.ManageMessages )]
     public async Task Purge( int count )
     {
-      var enumerator = Context.Channel.GetMessagesAsync( count + 1 ).GetEnumerator();
+      var enumerator = Context.Channel.GetMessagesAsync( count ).GetEnumerator();
       while ( await enumerator.MoveNext( new System.Threading.CancellationToken() ) )
         await Context.Channel.DeleteMessagesAsync( enumerator.Current );
     }
