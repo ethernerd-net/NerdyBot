@@ -1,9 +1,10 @@
 { // BotConfig
+    "PrefixChar":  "!",
     "DiscordToken": "DISCORD_TOKEN",
     "YoutubeAppName": "YT_NAME",
     "YoutubeAPIKey": "YT_KEY",
     "ImgurClientId": "IMGUR_CLIENT_ID",
     "GeniusAccessToken": "ACCESS_TOKEN",
-    "CleverBotApiKey":  "API_KEY",
-    "AdminUserId" :  0
+    "CleverBotApiKey": "API_KEY",
+    "AdminUserId": 0
 }

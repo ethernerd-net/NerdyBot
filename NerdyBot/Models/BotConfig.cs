@@ -2,6 +2,7 @@
 {
   public class BotConfig
   {
+    public char PrefixChar { get; set; }
     public string DiscordToken { get; set; }
     public string YoutubeAppName { get; set; }
     public string YoutubeAPIKey { get; set; }

@@ -282,6 +282,7 @@
     <Compile Include="Helper\CleverbotSession.cs" />
     <Compile Include="Models\Ball8Answer.cs" />
     <Compile Include="Models\BotConfig.cs" />
+    <Compile Include="Models\Guild.cs" />
     <Compile Include="Models\ModuleRestriction.cs" />
     <Compile Include="Models\MusicPlaylist.cs" />
     <Compile Include="Models\MusicPlaylistEntry.cs" />
@@ -303,8 +304,8 @@
     <Compile Include="Modules\Tag.cs" />
     <Compile Include="Helper\ScaleVolume.cs" />
     <Compile Include="Services\YoutubeService.cs" />
-    <Compile Include="SQLite.cs" />
-    <Compile Include="SQLiteAsync.cs" />
+    <Compile Include="Helper\SQLite.cs" />
+    <Compile Include="Helper\SQLiteAsync.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -52,10 +52,11 @@ namespace NerdyBot.Modules
     {
       if ( Context.User.Id == BotConfig.AdminUserId )
       {
+        await MessageService.SendMessageToCurrentChannel( Context, "Sorry guys i got to go, mom is calling :rolling_eyes:" );
         await Context.Message.DeleteAsync();
-        await Client.StopAsync();
+        Client.StopAsync();
         //TODO safe consoleoutput to file
-        //Environment.Exit( 0 );
+        Environment.Exit( 0 );
       }
     }
     
