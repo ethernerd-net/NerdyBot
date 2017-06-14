@@ -65,14 +65,6 @@ namespace NerdyBot.Modules
       queue.Enqueue( new MusicPlaylistEntry() { URL = content, Author = Context.User.ToString(), Title = "" } );
     }
 
-    [Command( "volume" )]
-    public void Volume( int volume )
-    {
-      string blockingModule = AudioService.GetBlock( Context.Guild.Id );
-      if ( !string.IsNullOrEmpty( blockingModule ) && blockingModule != typeof( MusicModule ).Name )
-        AudioService.Volume = volume / 100f;
-    }
-
     [Command( "stop" )]
     public void Stop()
     {

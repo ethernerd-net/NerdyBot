@@ -55,7 +55,6 @@ namespace NerdyBot.Services
       {
         JoinChannel( context ).GetAwaiter().GetResult();
         this.playing[context.GuildId] = true;
-        Volume = volume;
         try
         {
           var OutFormat = new WaveFormat( 48000, 16, 2 ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
@@ -75,7 +74,7 @@ namespace NerdyBot.Services
                 for ( int i = byteCount; i < blockSize; i++ )
                   buffer[i] = 0;
               }
-              audioStreams[context.GuildId].Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, Volume ), 0, blockSize ); // Send the buffer to Discord
+              audioStreams[context.GuildId].Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
               audioStreams[context.GuildId].FlushAsync();
             }
           }
