@@ -36,10 +36,10 @@ namespace NerdyBot.Modules
     [Command( "create" )]
     public void Create( string tagName, TagType tagType, params string[] content )
     {
-      Task.Run( async () =>
+      Task.Run( () =>
       {
         if ( !IsValidName( tagName, Context.Guild.Id ) )
-          await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' bereits in Verwendung!", MessageType.Info );
+          MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' bereits in Verwendung!", MessageType.Info );
         else
         {
           Tag tag = new Tag()
@@ -63,10 +63,10 @@ namespace NerdyBot.Modules
             break;
 
           case TagType.Sound:
-            int amountCreated = await AddSoundToTag( tag, content );
+            int amountCreated = AddSoundToTag( tag, content );
             if ( amountCreated != content.Count() )
             {
-              await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' konnte nur {amountCreated} von {content.Count()} Einträgen anlegen!", MessageType.Info );
+              MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' konnte nur {amountCreated} von {content.Count()} Einträgen anlegen!", MessageType.Info );
               if ( amountCreated == 0 )
               {
                 DatabaseService.Database.Delete( tag );
@@ -78,7 +78,7 @@ namespace NerdyBot.Modules
           default:
             throw new ArgumentException( "WTF?!?!" );
           }
-          await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' erfolgreich erstellt!", MessageType.Info );
+          MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' erfolgreich erstellt!", MessageType.Info );
         }
       } );
     }
@@ -90,7 +90,7 @@ namespace NerdyBot.Modules
       {
         var tag = GetTag( tagName, Context.Guild.Id );
         if ( tag.Author != Context.User.ToString() && !( await Context.Guild.GetUserAsync( Context.User.Id ) ).GuildPermissions.Administrator )
-          await MessageService.SendMessageToCurrentChannel( Context, $"Du bist zu unwichtig für diese Aktion", MessageType.Info );
+          MessageService.SendMessageToCurrentChannel( Context, $"Du bist zu unwichtig für diese Aktion", MessageType.Info );
         else
         {
           switch ( editType )
@@ -105,17 +105,17 @@ namespace NerdyBot.Modules
               count = content.Count();
               break;
             case TagType.Sound:
-              count = await AddSoundToTag( tag, content );
+              count = AddSoundToTag( tag, content );
               break;
             default:
               throw new ArgumentException( "WTF?!?!" );
             }
-            await MessageService.SendMessageToCurrentChannel( Context, $"{count} Einträge zu '{tag.Name} hinzugefügt'!", MessageType.Info );
+            MessageService.SendMessageToCurrentChannel( Context, $"{count} Einträge zu '{tag.Name} hinzugefügt'!", MessageType.Info );
             break;
 
           case EditType.Remove:
             int remCount = RemoveTagEntry( tag, content );
-            await MessageService.SendMessageToCurrentChannel( Context, $"{remCount} / {content.Count()} removed", MessageType.Info );
+            MessageService.SendMessageToCurrentChannel( Context, $"{remCount} / {content.Count()} removed", MessageType.Info );
             break;
 
           case EditType.Rename:
@@ -123,10 +123,10 @@ namespace NerdyBot.Modules
             if ( IsValidName( newTagName, Context.Guild.Id ) )
             {
               tag.Name = newTagName;
-              await MessageService.SendMessageToCurrentChannel( Context, $"Tag umbenannt in '{tag.Name}'!", MessageType.Info );
+              MessageService.SendMessageToCurrentChannel( Context, $"Tag umbenannt in '{tag.Name}'!", MessageType.Info );
             }
             else
-              await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{newTagName}' existiert bereits oder ist reserviert!!", MessageType.Info );
+              MessageService.SendMessageToCurrentChannel( Context, $"Tag '{newTagName}' existiert bereits oder ist reserviert!!", MessageType.Info );
             break;
 
           case EditType.Volume:
@@ -134,10 +134,10 @@ namespace NerdyBot.Modules
             if ( short.TryParse( content[0], out vol ) && vol > 0 && vol <= 100 )
               tag.Volume = vol;
             else
-              await MessageService.SendMessageToCurrentChannel( Context, $"Die Lautstärke muss eine Zahl zwischen 0 und 101 sein!", MessageType.Info );
+              MessageService.SendMessageToCurrentChannel( Context, $"Die Lautstärke muss eine Zahl zwischen 0 und 101 sein!", MessageType.Info );
             break;
           default:
-            await MessageService.SendMessageToCurrentChannel( Context, $"Die Option Name '{editType}' ist nicht valide!", MessageType.Info );
+            MessageService.SendMessageToCurrentChannel( Context, $"Die Option Name '{editType}' ist nicht valide!", MessageType.Info );
             break;
           }
           DatabaseService.Database.Update( tag );
@@ -146,7 +146,7 @@ namespace NerdyBot.Modules
     }
 
     [Command( "list" ), Priority( 10 )]
-    public async Task List()
+    public void List()
     {
       long gid = ( long )Context.Guild.Id;
       var tagsInOrder = DatabaseService.Database.Table<Tag>().Where( t => t.GuildId == gid ).OrderBy( x => x.Name );
@@ -171,21 +171,21 @@ namespace NerdyBot.Modules
         }
         sb.Remove( sb.Length - 2, 2 );
       }
-      await MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block, true, "md" );
+      MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block, true, "md" );
     }
 
     [Command( "delete" )]
-    public async Task Delete( string tagName )
+    public void Delete( string tagName )
     {
       var tag = GetTag( tagName, Context.Guild.Id );
       if ( DatabaseService.Database.Delete<Tag>( tag.Id ) > 0 )
-        await MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' erfolgreich gelöscht!", MessageType.Info );
+        MessageService.SendMessageToCurrentChannel( Context, $"Tag '{tagName}' erfolgreich gelöscht!", MessageType.Info );
       else
-        await MessageService.SendMessageToCurrentChannel( Context, $"Fehler beim löschen (schade)!", MessageType.Info );
+        MessageService.SendMessageToCurrentChannel( Context, $"Fehler beim löschen (schade)!", MessageType.Info );
     }
 
     [Command( "info" )]
-    public async Task Info( string tagName )
+    public void Info( string tagName )
     {
       var tag = GetTag( tagName, Context.Guild.Id );
       StringBuilder sb = new StringBuilder( $"==== {tag.Name} =====" );
@@ -207,11 +207,11 @@ namespace NerdyBot.Modules
       sb.Append( "Anzahl Einträge: " );
       sb.AppendLine( DatabaseService.Database.Table<TagEntry>().Count( te => te.TagId == tag.Id ).ToString() );
 
-      await MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block );
+      MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block );
     }
 
     [Command( "raw" )]
-    public async Task Raw( string tagName )
+    public void Raw( string tagName )
     {
       var tag = GetTag( tagName, Context.Guild.Id );
       StringBuilder sb = new StringBuilder( $"==== {tag.Name} ====" );
@@ -221,19 +221,19 @@ namespace NerdyBot.Modules
       foreach ( var entry in DatabaseService.Database.Table<TagEntry>().Where( te => te.TagId == tag.Id ) )
         sb.AppendLine( entry.TextContent );
 
-      await MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block );
+      MessageService.SendMessageToCurrentChannel( Context, sb.ToString(), MessageType.Block );
     }
 
     [Command( "help" ), Priority( 10 )]
-    public async Task Help()
+    public void Help()
     {
-      await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
+      MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
     }
 
     [Command()]
     public void Send( string tagName )
     {
-      Task.Run( async () =>
+      Task.Run( () =>
       {
         try
         {
@@ -244,13 +244,13 @@ namespace NerdyBot.Modules
           switch ( tag.Type )
           {
           case TagType.Text:
-            await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent, MessageType.Info );
+            MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent, MessageType.Info );
             break;
           case TagType.Sound:
             AudioService.SendAudio( new AudioContext() { GuildId = Context.Guild.Id, UserId = Context.User.Id }, tagEntries.ElementAt( idx ).ByteContent, tag.Volume / 100f );
             break;
           case TagType.Url:
-            await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent );
+            MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent );
             break;
           default:
             throw new ArgumentException( "WTF?!" );
@@ -260,7 +260,7 @@ namespace NerdyBot.Modules
         }
         catch ( Exception ex )
         {
-          await MessageService.SendMessageToCurrentChannel( Context, ex.Message, MessageType.Info );
+          MessageService.SendMessageToCurrentChannel( Context, ex.Message, MessageType.Info );
         }
       } );
     }
@@ -331,7 +331,7 @@ namespace NerdyBot.Modules
       foreach ( string entry in entries )
         DatabaseService.Database.Insert( new TagEntry() { TagId = tag.Id, TextContent = entry } );
     }
-    private async Task<int> AddSoundToTag( Tag tag, string[] entries )
+    private int AddSoundToTag( Tag tag, string[] entries )
     {
       int count = 0;
       string path = Path.Combine( "tag", tag.Name );
@@ -351,7 +351,7 @@ namespace NerdyBot.Modules
         }
         catch ( Exception ex )
         {
-          await MessageService.Log( ex.Message, "Exception" );
+          MessageService.Log( ex.Message, "Exception" );
         }
       }
       return count;

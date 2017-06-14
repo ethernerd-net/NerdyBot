@@ -26,7 +26,7 @@ namespace NerdyBot.Modules
       using ( Context.Channel.EnterTypingState() )
       {
         var answer = await this.session.GetResponseAsync( message );
-        await MessageService.SendMessageToCurrentChannel( Context, $"{Context.User.Mention}, {answer.Response}" );
+        MessageService.SendMessageToCurrentChannel( Context, $"{Context.User.Mention}, {answer.Response}" );
       }
     }
   }

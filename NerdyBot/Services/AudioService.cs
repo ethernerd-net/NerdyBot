@@ -94,7 +94,16 @@ namespace NerdyBot.Services
     public async Task LeaveChannel( ulong guildId )
     {
       if ( this.audioClients[guildId] != null )
+      {
         await this.audioClients[guildId].StopAsync();
+        this.audioClients[guildId].Dispose();
+        this.audioClients[guildId] = null;
+
+        this.audioStreams[guildId].Dispose();
+        this.audioStreams[guildId] = null;
+
+        this.lastChannels[guildId] = 0;
+      }
     }
     public async Task JoinChannel( AudioContext context )
     {      
@@ -102,14 +111,12 @@ namespace NerdyBot.Services
 
       if ( channel != null )
       {
-        //this.svcMessage.Log( "playing " + Path.GetDirectoryName( localPath ), context.User.ToString() );
-        if ( lastChannels[context.GuildId] != channel.Id || audioClients[context.GuildId].ConnectionState == Discord.ConnectionState.Disconnected )
+        if ( lastChannels[context.GuildId] != channel.Id || audioClients[context.GuildId] == null || audioClients[context.GuildId].ConnectionState == Discord.ConnectionState.Disconnected )
         {
+          await LeaveChannel( context.GuildId );
+
           lastChannels[context.GuildId] = channel.Id;
           audioClients[context.GuildId] = await channel.ConnectAsync();
-
-          if ( audioStreams[context.GuildId] != null )
-            audioStreams[context.GuildId].Dispose();
           audioStreams[context.GuildId] = audioClients[context.GuildId].CreatePCMStream( AudioApplication.Mixed );
         }
       }

@@ -19,84 +19,84 @@ namespace NerdyBot.Modules
     public MessageService MessageService { get; set; }
 
     [Command( "cat" )]
-    public async Task Cat()
+    public void Cat()
     {
       string catJson = ( new WebClient() ).DownloadString( "http://random.cat/meow" );
       var cat = JsonConvert.DeserializeObject<RandomCat>( catJson );
-      await MessageService.SendMessageToCurrentChannel( Context, cat.file.Replace( "\\", "" ) );
+      MessageService.SendMessageToCurrentChannel( Context, cat.file.Replace( "\\", "" ) );
     }
 
     [Command( "penguin" )]
-    public async Task Penguin()
+    public void Penguin()
     {
       string pengu = ( new WebClient() ).DownloadString( "http://penguin.wtf/" );
-      await MessageService.SendMessageToCurrentChannel( Context, pengu );
+      MessageService.SendMessageToCurrentChannel( Context, pengu );
     }
 
     [Command( "bunny" )]
-    public async Task Bunny()
+    public void Bunny()
     {
       string bunnyJson = ( new WebClient() ).DownloadString( "https://api.bunnies.io/v2/loop/random/?media=gif" );
       var bunny = JsonConvert.DeserializeObject<RandomBunny>( bunnyJson );
-      await MessageService.SendMessageToCurrentChannel( Context, bunny.media.gif );
+      MessageService.SendMessageToCurrentChannel( Context, bunny.media.gif );
     }
 
     [Command( "chuck" )]
-    public async Task Chuck()
+    public void Chuck()
     {
       string chuckJson = ( new WebClient() ).DownloadString( "http://api.icndb.com/jokes/random" );
       var chuck = JsonConvert.DeserializeObject<RandomChuck>( chuckJson );
-      await MessageService.SendMessageToCurrentChannel( Context, chuck.value.joke );
+      MessageService.SendMessageToCurrentChannel( Context, chuck.value.joke );
     }
 
     [Command( "joke" )]
-    public async Task Joke()
+    public void Joke()
     {
       string jokeJson = ( new WebClient() ).DownloadString( "http://tambal.azurewebsites.net/joke/random" );
       var joke = JsonConvert.DeserializeObject<ChuckJoke>( jokeJson );
-      await MessageService.SendMessageToCurrentChannel( Context, joke.joke );
+      MessageService.SendMessageToCurrentChannel( Context, joke.joke );
     }
 
     [Command( "yomomma" )]
-    public async Task Yomomma()
+    public void Yomomma()
     {
       string momJson = ( new WebClient() ).DownloadString( "http://api.yomomma.info/" );
       var mom = JsonConvert.DeserializeObject<ChuckJoke>( momJson );
-      await MessageService.SendMessageToCurrentChannel( Context, mom.joke );
+      MessageService.SendMessageToCurrentChannel( Context, mom.joke );
     }
 
     [Command( "quote" )]
-    public async Task Quote()
+    public void Quote()
     {
       string quoteJson = ( new WebClient() ).DownloadString( "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand" );
       var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
       string text = StripHTML( EntityToUnicode( quote.content ) );
-      await MessageService.SendMessageToCurrentChannel( Context, text + Environment.NewLine + Environment.NewLine + "-" + quote.title, MessageType.Block );
+      MessageService.SendMessageToCurrentChannel( Context, text + Environment.NewLine + Environment.NewLine + "-" + quote.title, MessageType.Block );
     }
 
     [Command( "trump" )]
-    public async Task Trump()
+    public void Trump()
     {
       string trumpJson = ( new WebClient() ).DownloadString( "https://api.whatdoestrumpthink.com/api/v1/quotes/random" );
       var trump = JsonConvert.DeserializeObject<TrumpQuote>( trumpJson );
-      await MessageService.SendMessageToCurrentChannel( Context, "Trump : " + trump.message );
+      MessageService.SendMessageToCurrentChannel( Context, "Trump : " + trump.message );
     }
 
     [Command( "xkcd" )]
-    public async Task xkcd()
+    public void xkcd()
     {
       string xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/info.0.json" );
       var xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
 
       xkcdJson = ( new WebClient() ).DownloadString( "https://xkcd.com/" + ( new Random() ).Next( xkcd.num ) + "/info.0.json" );
       xkcd = JsonConvert.DeserializeObject<RandomXKCD>( xkcdJson );
-      await MessageService.SendMessageToCurrentChannel( Context, xkcd.img.Replace( "\\", "" ) );
+      MessageService.SendMessageToCurrentChannel( Context, xkcd.img.Replace( "\\", "" ) );
     }
 
     [Command( "help" )]
-    public async Task help()
+    public void Help()
     {
-      await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
+      MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
     }
 
     public static string QuickHelp()

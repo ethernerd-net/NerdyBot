@@ -49,7 +49,7 @@ namespace NerdyBot
       await client.SetGameAsync( "Not nerdy at all" );
       foreach ( var guild in this.client.Guilds )
       {
-        //await guild.DefaultChannel.SendMessageAsync( "`Sorry for the wait, my Master killed my process. Don't tell him i'm back! ;)`" ); //SUPRISE, i'm back! :3
+        await guild.DefaultChannel.SendMessageAsync( "`Sorry for the wait, my Master killed my process. Don't tell him i'm back! ;)`" ); //SUPRISE, i'm back! :3
         this.svcAudio.AddGuild( guild.Id );
       }
     }
@@ -60,7 +60,7 @@ namespace NerdyBot
       var lightGuild = this.svcDatabase.Database.Table<Guild>().Where( g => g.GuildId == guildId ).FirstOrDefault();
       if ( lightGuild == null )
       {
-        //await guild.DefaultChannel.SendMessageAsync( "`Hi, my Name is NerdyBot and i'm addicted! (To be buggy and not doing what i was designed to do)`" );
+        await guild.DefaultChannel.SendMessageAsync( "`Hi, my Name is NerdyBot and i'm addicted! (To be buggy and not doing what i was designed to do)`" );
         this.svcDatabase.Database.Insert( new Guild() { GuildId = guildId, WelcomeMessage = "Welcome $mention$, make yourself at home :)" } );
       }
       this.svcAudio.AddGuild( guild.Id );
@@ -104,7 +104,7 @@ namespace NerdyBot
       // Create a Command Context
       var context = new CommandContext( client, message );
 
-      await svcMessage.Log( context.Message.Content, context.User.ToString() );
+      svcMessage.Log( context.Message.Content, context.User.ToString() );
 
       // Execute the command. (result does not indicate a return value, 
       // rather an object stating if the command executed succesfully)

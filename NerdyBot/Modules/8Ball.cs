@@ -29,18 +29,18 @@ namespace NerdyBot.Modules
     }
 
     [Command( "help" )]
-    public async Task Help()
+    public void Help()
     {
-      await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
+      MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
     }
 
     [Command()]
-    public async Task Execute( string question )
+    public void Execute( string question )
     {
       var answers = DatabaseService.Database.Table<Ball8Answer>().ToList();
       int idx = ( new Random() ).Next( 0, answers.Count() );
 
-      await MessageService.SendMessageToCurrentChannel( Context, $"{Context.User.Mention} asked: '{question}'{Environment.NewLine}{Environment.NewLine}" + answers[idx], MessageType.Info );
+      MessageService.SendMessageToCurrentChannel( Context, $"{Context.User.Mention} asked: '{question}'{Environment.NewLine}{Environment.NewLine}" + answers[idx], MessageType.Info );
     }
 
     public static string QuickHelp()

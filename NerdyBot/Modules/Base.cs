@@ -52,17 +52,23 @@ namespace NerdyBot.Modules
     {
       if ( Context.User.Id == BotConfig.AdminUserId )
       {
-        await MessageService.SendMessageToCurrentChannel( Context, "Sorry guys i got to go, mom is calling :rolling_eyes:" );
+        foreach ( var guild in Client.Guilds )
+        {
+          AudioService.StopPlaying( guild.Id );
+          await AudioService.LeaveChannel( guild.Id );
+          await guild.DefaultChannel.SendMessageAsync( "Sorry guys i got to go, mom is calling :rolling_eyes:" );
+        }
+        await Context.Message.DeleteAsync();
         Client.StopAsync();
 
         //TODO safe consoleoutput to file
-        await Task.Delay( 2000 );
+        await Task.Delay( 5000 );
         Environment.Exit( 0 );
       }
     }
     
     [Command( "help" )]
-    public async Task ShowHelp()
+    public void ShowHelp()
     {
       StringBuilder sb = new StringBuilder();
       Assembly assembly = Assembly.GetExecutingAssembly();
@@ -77,7 +83,7 @@ namespace NerdyBot.Modules
            sb.AppendLine();
          }
        }
-       await MessageService.SendMessageToCurrentUser( Context, sb.ToString(), MessageType.Info, true );
+       MessageService.SendMessageToCurrentUser( Context, sb.ToString(), MessageType.Info, true );
      }
   }
 }

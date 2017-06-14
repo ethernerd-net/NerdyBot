@@ -25,9 +25,9 @@ namespace NerdyBot.Modules
     {
       var responseItem = ( await YoutubeService.SearchVideos( query, 1 ) ).FirstOrDefault();
       if ( responseItem != null )
-        await MessageService.SendMessageToCurrentChannel( Context, $"https://www.youtube.com/watch?v={responseItem.Id.VideoId}" );
+        MessageService.SendMessageToCurrentChannel( Context, $"https://www.youtube.com/watch?v={responseItem.Id.VideoId}" );
       else
-        await MessageService.SendMessageToCurrentChannel( Context, "Und ich dachte es gibt alles auf youtube", MessageType.Info );
+        MessageService.SendMessageToCurrentChannel( Context, "Und ich dachte es gibt alles auf youtube", MessageType.Info );
     }
 
     [Command( "imgur" ), Alias( "i" )]
@@ -42,21 +42,21 @@ namespace NerdyBot.Modules
         var imgurJson = JsonConvert.DeserializeObject<ImgurJson>( responseJson );
         ImgurData data;
         if ( imgurJson.success && ( data = imgurJson.data.FirstOrDefault() ) != null )
-          await MessageService.SendMessageToCurrentChannel( Context, data.link.Replace( "\\", "" ) );
+          MessageService.SendMessageToCurrentChannel( Context, data.link.Replace( "\\", "" ) );
         else
-          await MessageService.SendMessageToCurrentChannel( Context, "No memes today.", MessageType.Info );
+          MessageService.SendMessageToCurrentChannel( Context, "No memes today.", MessageType.Info );
       }
     }
 
     [Command( "urban" ), Alias( "u" )]
-    public async Task Urban( string query )
+    public void Urban( string query )
     {
       string urbanJson = ( new WebClient() ).DownloadString( $"http://api.urbandictionary.com/v0/define?term={query}" );
       var urban = JsonConvert.DeserializeObject<UrbanJson>( urbanJson );
       if ( urban.list != null && urban.list.Count() > 0 )
-        await MessageService.SendMessageToCurrentChannel( Context, urban.list.First().permalink.Replace( "\\", "" ) );
+        MessageService.SendMessageToCurrentChannel( Context, urban.list.First().permalink.Replace( "\\", "" ) );
       else
-        await MessageService.SendMessageToCurrentChannel( Context, "404, Urban not found!", MessageType.Info );
+        MessageService.SendMessageToCurrentChannel( Context, "404, Urban not found!", MessageType.Info );
     }
 
     [Command( "lyrics" ), Alias( "l" )]
@@ -71,16 +71,16 @@ namespace NerdyBot.Modules
         var geniusJson = JsonConvert.DeserializeObject<GeniusJson>( responseJson ).response;
         Hit data;
         if ( ( data = geniusJson.hits.FirstOrDefault() ) != null )
-          await MessageService.SendMessageToCurrentChannel( Context, data.result.url.Replace( "\\", "" ) );
+          MessageService.SendMessageToCurrentChannel( Context, data.result.url.Replace( "\\", "" ) );
         else
-          await MessageService.SendMessageToCurrentChannel( Context, "No memes today.", MessageType.Info );
+          MessageService.SendMessageToCurrentChannel( Context, "No memes today.", MessageType.Info );
       }
     }
 
     [Command( "help" )]
-    public async Task Help()
+    public void Help()
     {
-      await MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
+      MessageService.SendMessageToCurrentUser( Context, FullHelp(), MessageType.Block );
     }
 
     public static string QuickHelp()

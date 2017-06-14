@@ -286,7 +286,6 @@
     <Compile Include="Models\BotConfig.cs" />
     <Compile Include="Models\Guild.cs" />
     <Compile Include="Models\ModuleRestriction.cs" />
-    <Compile Include="Models\MusicPlaylist.cs" />
     <Compile Include="Models\MusicPlaylistEntry.cs" />
     <Compile Include="Models\Tag.cs" />
     <Compile Include="Models\TagEntry.cs" />

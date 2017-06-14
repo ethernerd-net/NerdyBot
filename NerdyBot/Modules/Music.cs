@@ -68,7 +68,7 @@ namespace NerdyBot.Modules
     }
 
     [Command( "stop" )]
-    public void Stop( PlaylistMode mode )
+    public void Stop()
     {
       string blockingModule = AudioService.GetBlock( Context.Guild.Id );
       if ( !string.IsNullOrEmpty( blockingModule ) )
