@@ -280,6 +280,8 @@
   <ItemGroup>
     <Compile Include="Helper\CleverbotResponse.cs" />
     <Compile Include="Helper\CleverbotSession.cs" />
+    <Compile Include="Helper\EventHandlerExtension.cs" />
+    <Compile Include="Models\AudioContext.cs" />
     <Compile Include="Models\Ball8Answer.cs" />
     <Compile Include="Models\BotConfig.cs" />
     <Compile Include="Models\Guild.cs" />

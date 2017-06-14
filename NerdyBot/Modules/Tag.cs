@@ -49,7 +49,7 @@ namespace NerdyBot.Modules
             Type = tagType,
             CreateDate = DateTime.Now,
             Count = 0,
-            Volume = 100,
+            Volume = 30,
             GuildId = ( long )Context.Guild.Id
           };
 
@@ -247,7 +247,7 @@ namespace NerdyBot.Modules
             await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent, MessageType.Info );
             break;
           case TagType.Sound:
-            await AudioService.SendAudio( Context, tagEntries.ElementAt( idx ).ByteContent, tag.Volume / 100f );
+            AudioService.SendAudio( new AudioContext() { GuildId = Context.Guild.Id, UserId = Context.User.Id }, tagEntries.ElementAt( idx ).ByteContent, tag.Volume / 100f );
             break;
           case TagType.Url:
             await MessageService.SendMessageToCurrentChannel( Context, tagEntries.ElementAt( idx ).TextContent );
@@ -345,7 +345,7 @@ namespace NerdyBot.Modules
           {
             TagId = tag.Id,
             TextContent = entry,
-            ByteContent = await AudioService.DownloadAudio( entry )
+            ByteContent = AudioService.DownloadAudio( entry )
           } );
           count++;
         }

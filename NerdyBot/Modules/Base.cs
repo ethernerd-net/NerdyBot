@@ -32,7 +32,7 @@ namespace NerdyBot.Modules
     [Command( "stop" )]
     public void StopPlaying()
     {
-      AudioService.Playing[Context.Guild.Id] = false;
+      AudioService.StopPlaying( Context.Guild.Id );
     }
 
     [Command( "leave" )]
@@ -44,7 +44,7 @@ namespace NerdyBot.Modules
     [Command( "join" )]
     public async Task JoinChannel()
     {
-      await AudioService.JoinChannel( Context );
+      await AudioService.JoinChannel( new AudioContext() { GuildId = Context.Guild.Id, UserId = Context.User.Id } );
     }
 
     [Command( "exit" )]
@@ -53,9 +53,10 @@ namespace NerdyBot.Modules
       if ( Context.User.Id == BotConfig.AdminUserId )
       {
         await MessageService.SendMessageToCurrentChannel( Context, "Sorry guys i got to go, mom is calling :rolling_eyes:" );
-        await Context.Message.DeleteAsync();
         Client.StopAsync();
+
         //TODO safe consoleoutput to file
+        await Task.Delay( 2000 );
         Environment.Exit( 0 );
       }
     }

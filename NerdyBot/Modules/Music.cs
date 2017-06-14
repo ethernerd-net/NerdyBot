@@ -6,103 +6,107 @@ using Discord.Commands;
 
 using NerdyBot.Models;
 using NerdyBot.Services;
-using System.Collections.Generic;
 
 namespace NerdyBot.Modules
 {
   [Group("music"), Alias("m")]
   public class MusicModule : ModuleBase
   {
-    private ConcurrentDictionary<ulong, PlaylistMode> localModes = new ConcurrentDictionary<ulong, PlaylistMode>();
-    private ConcurrentDictionary<ulong, List<MusicPlaylistEntry>> localLists = new ConcurrentDictionary<ulong, List<MusicPlaylistEntry>>();
+    private ConcurrentDictionary<ulong, ConcurrentQueue<MusicPlaylistEntry>> queues = new ConcurrentDictionary<ulong, ConcurrentQueue<MusicPlaylistEntry>>();
 
     public AudioService AudioService { get; set; }
     public MessageService MessageService { get; set; }
-    /*public DatabaseService DatabaseService { get; set; }
+    public YoutubeService YoutubeService { get; set; }
 
-    public Music( DatabaseService databaseService )
+    public MusicModule( AudioService audioService )
     {
-      databaseService.Database.CreateTable<MusicPlaylist>();
-      databaseService.Database.CreateTable<MusicPlaylistEntry>();
+      audioService.FinishedSending += AudioServiceFinishedSending;
     }
-
-    [Group("playlist"), Alias("pl")]
-    public class Playlist : ModuleBase
-    {
-      private ConcurrentDictionary<ulong, string> currentPlaylist = new ConcurrentDictionary<ulong, string>();
-
-      public DatabaseService DatabaseService { get; set; }
-      public AudioService AudioService { get; set; }
-
-      [Command( "play" )]
-      public async Task Play()
-      {
-        throw new NotImplementedException();
-      }
-      [Command( "play" )]
-      public async Task Play( string plName )
-      {
-        string uniquePlId = $"{Context.Guild.Id}{plName}";
-        string currentPlName;
-        MusicPlaylist pl;
-
-        if ( this.currentPlaylist.TryGetValue( Context.Guild.Id, out currentPlName ) && currentPlName == plName )
-          return; //Playlist spielt bereits
-        else if ( ( pl = DatabaseService.Database.Table<MusicPlaylist>().Where( mp => mp.UniqueID == uniquePlId ).FirstOrDefault() ) == null )
-          return; //Playlist existiert nicht
-        else
-        {
-          MusicPlaylistEntry entry;
-          var list = DatabaseService.Database.Table<MusicPlaylistEntry>().Where( mpe => mpe.QueueId == uniquePlId );
-          if ( ( entry = list.Where( mpe => mpe.Id == pl.CurrentEntry ).FirstOrDefault() ) == null )
-            return; //Existiert nicht mehr D:
-
-        }
-      }
-
-      [Command( "create" )]
-      public async Task Create()
-      {
-        throw new NotImplementedException();
-      }
-      [Command( "delete" )]
-      public async Task Delete()
-      {
-        throw new NotImplementedException();
-      }
-      [Command( "add" )]
-      public async Task Add()
-      {
-        throw new NotImplementedException();
-      }
-      [Command( "remove" )]
-      public async Task Remove()
-      {
-        throw new NotImplementedException();
-      }
-    }*/
 
     [Command( "play" )]
-    public async Task Play()
+    public void Play()
     {
-      throw new NotImplementedException();
+      Next();
     }
-    [Command( "next" )]
-    public async Task Next()
+    [Command( "play" )]
+    public void Play( string content )
     {
-      throw new NotImplementedException();
+      var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+
+      queue.Enqueue( new MusicPlaylistEntry() { URL = content, Author = Context.User.ToString(), Title = "" } );
+
+      Next();
+    }
+
+    [Command( "next" )]
+    public void Next()
+    {
+      string blockingModule = AudioService.GetBlock( Context.Guild.Id );
+      if ( !string.IsNullOrEmpty( blockingModule ) && blockingModule != typeof( MusicModule ).Name )
+        throw new ApplicationException( $"The service is already blocked by '{blockingModule}'!" );
+
+      var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+
+      if ( queue.Count == 0 )
+      {
+        AudioService.StopPlaying( Context.Guild.Id );
+        throw new Exception( "Nothing to play" );
+      }
+
+      AudioService.StopPlaying( Context.Guild.Id );
+      AudioService.SetBlock( Context.Guild.Id, typeof( MusicModule ).Name );
+
+      Play( new AudioContext() { GuildId = Context.Guild.Id, UserId = Context.User.Id } );
     }
 
     [Command( "add" )]
-    public async Task QueueAdd( string content )
+    public void QueueAdd( string content )
     {
-      throw new NotImplementedException();
+      var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+
+      queue.Enqueue( new MusicPlaylistEntry() { URL = content, Author = Context.User.ToString(), Title = "" } );
     }
 
-    [Command( "mode" )]
-    public async Task Mode( PlaylistMode mode )
+    [Command( "stop" )]
+    public void Stop( PlaylistMode mode )
     {
-      throw new NotImplementedException();
+      string blockingModule = AudioService.GetBlock( Context.Guild.Id );
+      if ( !string.IsNullOrEmpty( blockingModule ) )
+      {
+        if ( blockingModule != typeof( MusicModule ).Name )
+          throw new ApplicationException( $"You can't stop audio transmission this way, because its blocked by '{blockingModule}'!" );
+        AudioService.StopPlaying( Context.Guild.Id );
+      }
+    }
+
+    private void AudioServiceFinishedSending( object sender, GuildIdEventArgs e )
+    {
+      if ( AudioService.GetBlock( e.Context.GuildId ) != typeof( MusicModule ).Name )
+        return;
+      var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+      if ( queue.Count == 0 )
+      {
+        AudioService.StopPlaying( Context.Guild.Id );
+        throw new Exception( "Playlist end" );
+      }
+
+      Task.Delay( 1000 ).GetAwaiter().GetResult();
+
+      Play( e.Context );
+    }
+
+    private void Play( AudioContext context )
+    {
+      Task.Run( () =>
+      {
+        var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+
+        MusicPlaylistEntry entry;
+        while ( !queue.TryDequeue( out entry ) )
+          ;
+
+        AudioService.SendAudio( context, AudioService.DownloadAudio( entry.URL ), 0.2f, typeof( MusicModule ).Name );
+      } );
     }
   }
 }

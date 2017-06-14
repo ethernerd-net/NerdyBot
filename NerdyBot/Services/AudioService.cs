@@ -4,20 +4,21 @@ using System.Net;
 using System.Linq;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 using NAudio.Wave;
 using Discord.Audio;
-using Discord.Commands;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
+using Discord.WebSocket;
+
 using NerdyBot.Models;
+using NerdyBot.Helper;
 
 namespace NerdyBot.Services
 {
   public class AudioService
   {
+    private ConcurrentDictionary<ulong, string> blocked = new ConcurrentDictionary<ulong, string>();
     private ConcurrentDictionary<ulong, bool> playing = new ConcurrentDictionary<ulong, bool>();
-    private ConcurrentDictionary<ulong, bool> listPlaying = new ConcurrentDictionary<ulong, bool>();
     private ConcurrentDictionary<ulong, object> locks = new ConcurrentDictionary<ulong, object>();
     private ConcurrentDictionary<ulong, ulong> lastChannels = new ConcurrentDictionary<ulong, ulong>();
     private ConcurrentDictionary<ulong, IAudioClient> audioClients = new ConcurrentDictionary<ulong, IAudioClient>();
@@ -25,14 +26,17 @@ namespace NerdyBot.Services
 
 
     private MessageService svcMessage;
+    private DiscordSocketClient client; 
 
-    public AudioService( MessageService svcMessage )
+
+    public AudioService( MessageService svcMessage, DiscordSocketClient client )
     {
       this.svcMessage = svcMessage;
+      this.client = client;
+      
     }
-
-    public IDictionary<ulong, bool> Playing { get { return this.playing; } }
-    public async Task<byte[]> DownloadAudio( string url )
+    
+    public byte[] DownloadAudio( string url )
     {
       string dlFilePath = Download( url );
       if ( string.IsNullOrEmpty( dlFilePath ) )
@@ -45,13 +49,15 @@ namespace NerdyBot.Services
       File.Delete( dlFilePath );
       return audioBytes;
     }
-    public async Task SendAudio( ICommandContext context, byte[] audio, float volume = 1f )
+    public void SendAudio( AudioContext context, byte[] audio, float volume = 1f, string callingModule = "" )
     {
-      await JoinChannel( context );
+      if ( !string.IsNullOrEmpty( GetBlock( context.GuildId ) ) && GetBlock( context.GuildId ) != callingModule )
+        throw new ApplicationException( $"The service is already blocked by '{GetBlock( context.GuildId )}'!" );
 
-      lock ( locks[context.Guild.Id] )
+      lock ( locks[context.GuildId] )
       {
-        this.playing[context.Guild.Id] = true;
+        JoinChannel( context ).GetAwaiter().GetResult();
+        this.playing[context.GuildId] = true;
         try
         {
           var OutFormat = new WaveFormat( 48000, 16, 2 ); // Create a new Output Format, using the spec that Discord will accept, and with the number of channels that our client supports.
@@ -63,7 +69,7 @@ namespace NerdyBot.Services
             byte[] buffer = new byte[blockSize];
             int byteCount;
 
-            while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && this.playing[context.Guild.Id] ) // Read audio into our buffer, and keep a loop open while data is present
+            while ( ( byteCount = resampler.Read( buffer, 0, blockSize ) ) > 0 && this.playing[context.GuildId] ) // Read audio into our buffer, and keep a loop open while data is present
             {
               if ( byteCount < blockSize )
               {
@@ -71,51 +77,40 @@ namespace NerdyBot.Services
                 for ( int i = byteCount; i < blockSize; i++ )
                   buffer[i] = 0;
               }
-              audioStreams[context.Guild.Id].Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
-              audioStreams[context.Guild.Id].FlushAsync();
+              audioStreams[context.GuildId].Write( ScaleVolume.ScaleVolumeSafeNoAlloc( buffer, volume ), 0, blockSize ); // Send the buffer to Discord
+              audioStreams[context.GuildId].FlushAsync();
             }
           }
+          OnFinishedSending( new GuildIdEventArgs() { Context = context } );
         }
         catch ( Exception ex )
         {
           this.svcMessage.Log( ex.Message, "Exception", Discord.LogSeverity.Error );
         }
-        this.playing[context.Guild.Id] = false;
+        this.playing[context.GuildId] = false;
       }
     }
-
-    /*public void PlayList( ConcurrentDictionary<int, string> playlist, int currentKey = -1, PlaylistMode mode = PlaylistMode.Normal )
-    {
-      string currentUrl = string.Empty;
-      if ( !playlist.TryGetValue( currentKey, out currentUrl ) )
-        currentUrl = playlist.First().Value;
-
-
-      while ( mode == PlaylistMode.Normal && playlist.Last().Value == currentUrl )
-      {
-      }
-    }*/
 
     public async Task LeaveChannel( ulong guildId )
     {
       if ( this.audioClients[guildId] != null )
         await this.audioClients[guildId].StopAsync();
     }
-    public async Task JoinChannel( ICommandContext context )
-    {
-      var channel = context.Guild.GetVoiceChannelsAsync().Result.FirstOrDefault( vc => vc.GetUserAsync( context.User.Id ).Result != null );
+    public async Task JoinChannel( AudioContext context )
+    {      
+      var channel = this.client.GetGuild( context.GuildId ).VoiceChannels.FirstOrDefault( vc => vc.Users.Any( u => u.Id == context.UserId ) );
 
       if ( channel != null )
       {
         //this.svcMessage.Log( "playing " + Path.GetDirectoryName( localPath ), context.User.ToString() );
-        if ( lastChannels[context.Guild.Id] != channel.Id || audioClients[context.Guild.Id].ConnectionState == Discord.ConnectionState.Disconnected )
+        if ( lastChannels[context.GuildId] != channel.Id || audioClients[context.GuildId].ConnectionState == Discord.ConnectionState.Disconnected )
         {
-          lastChannels[context.Guild.Id] = channel.Id;
-          audioClients[context.Guild.Id] = await channel.ConnectAsync();
+          lastChannels[context.GuildId] = channel.Id;
+          audioClients[context.GuildId] = await channel.ConnectAsync();
 
-          if ( audioStreams[context.Guild.Id] != null )
-            audioStreams[context.Guild.Id].Dispose();
-          audioStreams[context.Guild.Id] = audioClients[context.Guild.Id].CreatePCMStream( AudioApplication.Mixed );
+          if ( audioStreams[context.GuildId] != null )
+            audioStreams[context.GuildId].Dispose();
+          audioStreams[context.GuildId] = audioClients[context.GuildId].CreatePCMStream( AudioApplication.Mixed );
         }
       }
     }
@@ -126,7 +121,29 @@ namespace NerdyBot.Services
       this.locks.TryAdd( id, new object() );
       this.lastChannels.TryAdd( id, 0 );
       this.playing.TryAdd( id, false );
-      this.listPlaying.TryAdd( id, false );
+      this.blocked.TryAdd( id, string.Empty );
+    }
+    public void StopPlaying( ulong guildId )
+    {
+      this.playing[guildId] = false;
+      this.blocked[guildId] = string.Empty;
+    }
+
+    public void SetBlock( ulong guildId, string moduleName )
+    {
+      if ( !string.IsNullOrEmpty( GetBlock( guildId ) ) )
+        throw new ApplicationException( $"The service is already blocked by '{GetBlock( guildId )}'!" );
+      this.blocked[guildId] = moduleName;
+    }
+    public string GetBlock( ulong guildId )
+    {
+      return this.blocked[guildId];
+    }
+
+    public event EventHandler<GuildIdEventArgs> FinishedSending;
+    protected void OnFinishedSending( GuildIdEventArgs e )
+    {
+      FinishedSending.SafeInvoke( this, e );
     }
 
 
@@ -181,5 +198,10 @@ namespace NerdyBot.Services
 
       return outFile;
     }
+  }
+
+  public class GuildIdEventArgs : EventArgs
+  {
+    public AudioContext Context { get; set; }
   }
 }

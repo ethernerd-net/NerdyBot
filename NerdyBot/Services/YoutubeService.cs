@@ -3,6 +3,7 @@ using System.Web;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
@@ -65,6 +66,11 @@ namespace NerdyBot.Services
       else
         resultSet = new YoutubeIdResultSet() { Id = uri.Segments.Last(), IdType = YoutubeIdType.Video };
       return resultSet;
+    }
+
+    public bool IsYoutubeUrl( string url )
+    {
+      return Regex.IsMatch( url, @"^(https?\:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$" );
     }
   }
   public class YoutubeIdResultSet
