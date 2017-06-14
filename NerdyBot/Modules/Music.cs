@@ -12,8 +12,6 @@ namespace NerdyBot.Modules
   [Group("music"), Alias("m")]
   public class MusicModule : ModuleBase
   {
-    private ConcurrentDictionary<ulong, ConcurrentQueue<MusicPlaylistEntry>> queues = new ConcurrentDictionary<ulong, ConcurrentQueue<MusicPlaylistEntry>>();
-
     public AudioService AudioService { get; set; }
     public MessageService MessageService { get; set; }
     public YoutubeService YoutubeService { get; set; }
@@ -31,7 +29,7 @@ namespace NerdyBot.Modules
     [Command( "play" )]
     public void Play( string content )
     {
-      var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+      var queue = MusicModuleHandler.Handler.Queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
 
       queue.Enqueue( new MusicPlaylistEntry() { URL = content, Author = Context.User.ToString(), Title = "" } );
 
@@ -45,7 +43,7 @@ namespace NerdyBot.Modules
       if ( !string.IsNullOrEmpty( blockingModule ) && blockingModule != typeof( MusicModule ).Name )
         throw new ApplicationException( $"The service is already blocked by '{blockingModule}'!" );
 
-      var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+      var queue = MusicModuleHandler.Handler.Queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
 
       if ( queue.Count == 0 )
       {
@@ -62,9 +60,17 @@ namespace NerdyBot.Modules
     [Command( "add" )]
     public void QueueAdd( string content )
     {
-      var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+      var queue = MusicModuleHandler.Handler.Queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
 
       queue.Enqueue( new MusicPlaylistEntry() { URL = content, Author = Context.User.ToString(), Title = "" } );
+    }
+
+    [Command( "volume" )]
+    public void Volume( int volume )
+    {
+      string blockingModule = AudioService.GetBlock( Context.Guild.Id );
+      if ( !string.IsNullOrEmpty( blockingModule ) && blockingModule != typeof( MusicModule ).Name )
+        AudioService.Volume = volume / 100f;
     }
 
     [Command( "stop" )]
@@ -83,7 +89,7 @@ namespace NerdyBot.Modules
     {
       if ( AudioService.GetBlock( e.Context.GuildId ) != typeof( MusicModule ).Name )
         return;
-      var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+      var queue = MusicModuleHandler.Handler.Queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
       if ( queue.Count == 0 )
       {
         AudioService.StopPlaying( Context.Guild.Id );
@@ -99,13 +105,13 @@ namespace NerdyBot.Modules
     {
       Task.Run( () =>
       {
-        var queue = this.queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
+        var queue = MusicModuleHandler.Handler.Queues.GetOrAdd( Context.Guild.Id, new ConcurrentQueue<MusicPlaylistEntry>() );
 
         MusicPlaylistEntry entry;
         while ( !queue.TryDequeue( out entry ) )
           ;
 
-        AudioService.SendAudio( context, AudioService.DownloadAudio( entry.URL ), 0.2f, typeof( MusicModule ).Name );
+        AudioService.SendAudio( context, AudioService.DownloadAudio( entry.URL ), 0.5f, typeof( MusicModule ).Name );
       } );
     }
   }

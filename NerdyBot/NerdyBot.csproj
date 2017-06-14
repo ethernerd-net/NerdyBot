@@ -287,6 +287,7 @@
     <Compile Include="Models\Guild.cs" />
     <Compile Include="Models\ModuleRestriction.cs" />
     <Compile Include="Models\MusicPlaylistEntry.cs" />
+    <Compile Include="Models\MusicQueueHandler.cs" />
     <Compile Include="Models\Tag.cs" />
     <Compile Include="Models\TagEntry.cs" />
     <Compile Include="Modules\Base.cs" />
