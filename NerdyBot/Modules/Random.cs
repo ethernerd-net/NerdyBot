@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Linq;
 using System.Net;
+using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 using Newtonsoft.Json;
 using Discord.Commands;
 
 using NerdyBot.Services;
+using NerdyBot.Helper;
 
 namespace NerdyBot.Modules
 {
@@ -69,8 +67,8 @@ namespace NerdyBot.Modules
     public void Quote()
     {
       string quoteJson = ( new WebClient() ).DownloadString( "http://quotesondesign.com/wp-json/posts?filter[orderby]=rand" );
-      var quote = JsonConvert.DeserializeObject<List<RandomQuote>>( quoteJson ).First();
-      string text = StripHTML( EntityToUnicode( quote.content ) );
+      var quote = JsonConvert.DeserializeObject<System.Collections.Generic.List<RandomQuote>>( quoteJson ).First();
+      string text = HttpUtils.StripHTML( HttpUtils.EntityToUnicode( quote.content ) );
       MessageService.SendMessageToCurrentChannel( Context, text + Environment.NewLine + Environment.NewLine + "-" + quote.title, MessageType.Block );
     }
 
@@ -117,32 +115,6 @@ namespace NerdyBot.Modules
       sb.AppendLine( "random [option]" );
       sb.AppendLine( "option: cat | penguin | bunny | chuck | joke | yomomma | quote | trump | xkcd | help" );
       return sb.ToString();
-    }
-
-    public string EntityToUnicode( string html )
-    {
-      var replacements = new Dictionary<string, string>();
-      var regex = new Regex( "(&[a-z,0-9,#]{2,6};)" );
-      foreach ( Match match in regex.Matches( html ) )
-      {
-        if ( !replacements.ContainsKey( match.Value ) )
-        {
-          var unicode = WebUtility.HtmlDecode( match.Value );
-          if ( unicode.Length == 1 )
-          {
-            replacements.Add( match.Value, unicode );
-          }
-        }
-      }
-      foreach ( var replacement in replacements )
-      {
-        html = html.Replace( replacement.Key, replacement.Value );
-      }
-      return html;
-    }
-    public string StripHTML( string input )
-    {
-      return Regex.Replace( input, "<.*?>", String.Empty );
     }
 
     #region jsonClasses

@@ -285,6 +285,7 @@
     <Compile Include="Models\Ball8Answer.cs" />
     <Compile Include="Models\BotConfig.cs" />
     <Compile Include="Models\Guild.cs" />
+    <Compile Include="Helper\HttpUtils.cs" />
     <Compile Include="Models\ModuleRestriction.cs" />
     <Compile Include="Models\MusicPlaylistEntry.cs" />
     <Compile Include="Models\MusicQueueHandler.cs" />

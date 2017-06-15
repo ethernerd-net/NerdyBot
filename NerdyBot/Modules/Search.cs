@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Net;
+using System.Xml;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Discord.Commands;
 
 using NerdyBot.Services;
 using NerdyBot.Models;
+using NerdyBot.Helper;
 
 namespace NerdyBot.Modules
 {
@@ -20,7 +22,7 @@ namespace NerdyBot.Modules
     public MessageService MessageService { get; set; }
     public YoutubeService YoutubeService { get; set; }
 
-    [Command("youtube"), Alias("yt")]
+    [Command( "youtube", RunMode = RunMode.Async ), Alias( "yt" )]
     public async Task Youtube( string query )
     {
       var responseItem = ( await YoutubeService.SearchVideos( query, 1 ) ).FirstOrDefault();
@@ -30,7 +32,7 @@ namespace NerdyBot.Modules
         MessageService.SendMessageToCurrentChannel( Context, "Und ich dachte es gibt alles auf youtube", MessageType.Info );
     }
 
-    [Command( "imgur" ), Alias( "i" )]
+    [Command( "imgur", RunMode = RunMode.Async ), Alias( "i" )]
     public async Task Imgur( string query )
     {
       var request = WebRequest.CreateHttp( $"https://api.imgur.com/3/gallery/search/viral?q={query}" );
@@ -48,7 +50,7 @@ namespace NerdyBot.Modules
       }
     }
 
-    [Command( "urban" ), Alias( "u" )]
+    [Command( "urban", RunMode = RunMode.Async ), Alias( "u" )]
     public void Urban( string query )
     {
       string urbanJson = ( new WebClient() ).DownloadString( $"http://api.urbandictionary.com/v0/define?term={query}" );
@@ -59,7 +61,7 @@ namespace NerdyBot.Modules
         MessageService.SendMessageToCurrentChannel( Context, "404, Urban not found!", MessageType.Info );
     }
 
-    [Command( "lyrics" ), Alias( "l" )]
+    [Command( "lyrics", RunMode = RunMode.Async ), Alias( "l" )]
     public async Task Lyrics( string query )
     {
       var request = WebRequest.CreateHttp( $"http://api.genius.com/search?q={query}&access_token={BotConfig.GeniusAccessToken}" );
@@ -74,6 +76,53 @@ namespace NerdyBot.Modules
           MessageService.SendMessageToCurrentChannel( Context, data.result.url.Replace( "\\", "" ) );
         else
           MessageService.SendMessageToCurrentChannel( Context, "No memes today.", MessageType.Info );
+      }
+    }
+
+    [Command( "anime", RunMode = RunMode.Async ), Alias( "a" )]
+    public async Task Anime( string query )
+    {
+      var request = WebRequest.CreateHttp( $"https://myanimelist.net/api/anime/search.xml?q={query}" );
+      request.Credentials = new NetworkCredential( BotConfig.MyAnimeListUsr, BotConfig.MyAnimeListPwd );
+      var response = ( HttpWebResponse )await request.GetResponseAsync();
+
+      using ( StreamReader reader = new StreamReader( response.GetResponseStream() ) )
+      {
+        var xml = new XmlDocument();
+        xml.Load( reader );
+        var node = xml.DocumentElement.SelectSingleNode( "entry" );
+
+        StringBuilder sb = new StringBuilder( 1000 );
+        sb.AppendLine( $"*Searchresult for '{query}'*" );
+        sb.AppendLine();
+
+        sb.AppendLine( $"__**{node["title"].InnerText}**__" );
+        sb.AppendLine( $"*{node["english"].InnerText }*" );
+        sb.AppendLine();
+
+        sb.AppendLine( $"Episodes: {node["episodes"].InnerText }" );
+        sb.AppendLine( $"Start: {node["start_date"].InnerText }" );
+        sb.AppendLine( $"End: {node["end_date"].InnerText }" );
+        sb.AppendLine( $"Rating: {node["score"].InnerText }" );
+        sb.AppendLine( $"URL: `https://myanimelist.net/anime/{node["id"].InnerText }`" );
+        sb.AppendLine();
+        sb.AppendLine();
+
+        string summary = node["synopsis"].InnerText;
+        if ( summary.Length > 800 )
+        {
+          int idx = -1;
+          if ( ( idx = summary.IndexOf( "<br />" ) ) > 0 )
+            summary = summary.Substring( 0, idx );
+          else
+            summary = summary.Substring( 0, 600 ) + "...";
+        }
+        sb.AppendLine( HttpUtils.StripHTML( HttpUtils.EntityToUnicode( summary ) ) );
+        sb.AppendLine();
+        sb.AppendLine();
+
+        sb.AppendLine( node["image"].InnerText );
+        MessageService.SendMessageToCurrentChannel( Context, sb.ToString() );
       }
     }
 
@@ -97,7 +146,7 @@ namespace NerdyBot.Modules
       StringBuilder sb = new StringBuilder();
       sb.Append( QuickHelp() );
       sb.AppendLine( "Aliase: s" );
-      sb.AppendLine(  );
+      sb.AppendLine();
       sb.AppendLine( "Plattformen: youtube/yt | imgur/i | urban/u | lyrics/l" );
       sb.AppendLine();
       sb.AppendLine( "Beispiel: !search [PLATTFORM] query" );

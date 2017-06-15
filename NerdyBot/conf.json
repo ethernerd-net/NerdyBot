@@ -6,5 +6,7 @@
     "ImgurClientId": "IMGUR_CLIENT_ID",
     "GeniusAccessToken": "ACCESS_TOKEN",
     "CleverBotApiKey": "API_KEY",
+    "MyAnimeListUsr": "USRNAME",
+    "MyAnimeListPwd": "PASSWD",
     "AdminUserId": 0
 }

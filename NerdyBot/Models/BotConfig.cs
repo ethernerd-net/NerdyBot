@@ -9,6 +9,8 @@
     public string ImgurClientId { get; set; }
     public string GeniusAccessToken { get; set; }
     public string CleverBotApiKey { get; set; }
+    public string MyAnimeListUsr { get; set; }
+    public string MyAnimeListPwd { get; set; }
     public ulong AdminUserId { get; set; }
   }
 }
