@@ -12,5 +12,7 @@
     public string MyAnimeListUsr { get; set; }
     public string MyAnimeListPwd { get; set; }
     public ulong AdminUserId { get; set; }
+
+    public bool IsStopped { get; set; }
   }
 }

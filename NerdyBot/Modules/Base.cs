@@ -59,11 +59,8 @@ namespace NerdyBot.Modules
           await guild.DefaultChannel.SendMessageAsync( "Sorry guys i got to go, mom is calling :rolling_eyes:" );
         }
         await Context.Message.DeleteAsync();
+        BotConfig.IsStopped = true;
         Client.StopAsync();
-
-        //TODO safe consoleoutput to file
-        await Task.Delay( 5000 );
-        Environment.Exit( 0 );
       }
     }
     

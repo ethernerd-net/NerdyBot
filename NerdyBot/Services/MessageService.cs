@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -14,12 +15,29 @@ namespace NerdyBot.Services
   {
     public MessageService( DiscordSocketClient discordClient )
     {
+      Directory.CreateDirectory( "logs" );
+      Trace.Listeners.Clear();
+
+      TextWriterTraceListener twtl = new TextWriterTraceListener( Path.Combine( "logs", $"{DateTime.Now.ToString( "yyyy-MM-dd--hh-mm-ss" )}.log" ) );
+      twtl.Name = "TextLogger";
+      twtl.TraceOutputOptions = TraceOptions.ThreadId | TraceOptions.DateTime;
+
+      ConsoleTraceListener ctl = new ConsoleTraceListener( false );
+      ctl.TraceOutputOptions = TraceOptions.DateTime;
+
+      Trace.Listeners.Add( twtl );
+      Trace.Listeners.Add( ctl );
+      Trace.AutoFlush = true;
+
       discordClient.Log += ClientLog;
     }
 
     private async Task ClientLog( LogMessage arg )
     {
-      Console.WriteLine( arg.ToString() );
+      await Task.Run( () =>
+        {
+          Trace.WriteLine( arg.ToString() );
+        } );
     }
     
     public void SendMessageToCurrentChannel( ICommandContext context, string message, MessageType mType = MessageType.Normal, bool split = false, string highlight = "" )
@@ -35,9 +53,9 @@ namespace NerdyBot.Services
     public void Log( string text, string source = "", LogSeverity logLevel = LogSeverity.Info )
     {
       Task.Run( async () =>
-     {
-       await ClientLog( new LogMessage( logLevel, source, text ) );
-     } );
+        {
+          await ClientLog( new LogMessage( logLevel, source, text ) );
+        } );
     }
 
     private readonly int chunkSize = 1950;

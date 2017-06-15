@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 using Discord;
 using Discord.Commands;
@@ -38,10 +37,11 @@ namespace NerdyBot
       this.svcDatabase.Database.CreateTable<Guild>();
 
       this.client.Ready += ClientReady;
+      this.client.Disconnected += ClientDisconnected;
+
       this.client.JoinedGuild += JoinedGuild;
       this.client.UserJoined += UserJoined;
     }
-
 
     private async Task ClientReady()
     {
@@ -73,8 +73,6 @@ namespace NerdyBot
       if ( !string.IsNullOrEmpty( lightGuild.WelcomeMessage ) )
         await user.Guild.DefaultChannel.SendMessageAsync( lightGuild.WelcomeMessage.Replace( "$mention$", user.Mention ) );
     }
-
-    private IEnumerable<string> preservedKeys = new string[] { "perm", "help", "stop", "purge", "leave", "join", "backup" };
     
     private async Task InstallCommands()
     {
@@ -123,6 +121,15 @@ namespace NerdyBot
       }
       if ( !result.IsSuccess )
         await context.Channel.SendMessageAsync( $"`{result.ErrorReason}`" );
+    }
+    
+    private Task ClientDisconnected( System.Exception arg )
+    {
+      return Task.Run( () =>
+      {
+        if ( cfg.IsStopped )
+          System.Environment.Exit( 0 );
+      } );
     }
 
     public async Task Start()
