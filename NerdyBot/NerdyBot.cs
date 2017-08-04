@@ -49,7 +49,7 @@ namespace NerdyBot
       await client.SetGameAsync( "Not nerdy at all" );
       foreach ( var guild in this.client.Guilds )
       {
-        await guild.DefaultChannel.SendMessageAsync( "`Sorry for the wait, my Master killed my process. Don't tell him i'm back! ;)`" ); //SUPRISE, i'm back! :3
+        //await guild.DefaultChannel.SendMessageAsync( "`Sorry for the wait, my Master killed my process. Don't tell him i'm back! ;)`" ); //SUPRISE, i'm back! :3
         this.svcAudio.AddGuild( guild.Id );
       }
     }
